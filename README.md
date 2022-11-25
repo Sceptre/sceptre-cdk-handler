@@ -1,7 +1,5 @@
 # README
 
-# README
-
 ## What is this?
 
 `sceptre-cdk-handler` is a TemplateHandler for Sceptre (versions 2.7 and up) that lets you use an
