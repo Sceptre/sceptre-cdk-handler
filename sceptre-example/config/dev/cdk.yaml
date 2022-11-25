@@ -1,0 +1,5 @@
+template:
+  type: cdk
+  path: CDK/s3.py
+sceptre_user_data:
+  bucket_name: mybucket-{{ account_id }}-{{ region }}

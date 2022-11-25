@@ -136,3 +136,6 @@ test-reports/
 
 # MAC stuff
 .DS_Store
+
+# Node
+node_modules
