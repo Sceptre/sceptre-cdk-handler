@@ -2,6 +2,7 @@ import aws_cdk
 import importlib.machinery
 import importlib.util
 import os
+import pathlib
 import posixpath
 import shutil
 import subprocess
@@ -151,7 +152,7 @@ class CDK(TemplateHandler):
         # Import CDK Python template module
         template_path = posixpath.join('templates', self.cdk_template_path)
         self.logger.debug(f'{self.name} - Importing CDK Python template module {template_path}')
-        template_module_name = 'cdk_template'
+        template_module_name = pathlib.Path(template_path).stem
         loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
         spec = importlib.util.spec_from_loader(template_module_name, loader)
         template_module = importlib.util.module_from_spec(spec)
