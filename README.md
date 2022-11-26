@@ -2,13 +2,13 @@
 
 ## What is this?
 
-`sceptre-cdk-handler` is a TemplateHandler for Sceptre (versions 2.7 and up) that lets you use an
-AWS CDK template as a stack's template.
+`sceptre-cdk-handler` is a TemplateHandler for Sceptre (versions 2.7 and up) that lets you use a
+Python AWS CDK template as a stack's template.
 
 This template handler will use the AWS CDK to synthesize the CDK stack into a CloudFormation template
-and then run `npx cdk-assets` to publish any required assets to S3.
+and then run `npx cdk-assets` to publish any required assets to S3/ECR.
 
-**By using the CDK Handler, you are letting CDK synthesize a template, and upload artifacts to S3,
+**By using the CDK Handler, you are letting CDK synthesize a template, and upload artifacts to S3 and ECR
 and then using Sceptre to actually do the deployment of the template to a stack.**
 In other words, by using this handler with Sceptre, _you skip ever using `cdk deploy`; It's not needed_.
 
@@ -26,6 +26,10 @@ The template "type" for this handler is `cdk`.
 ### Arguments:
 
 * `path` (string, required): The path to the CDK template.
+
+#### CDK Template Requirements
+
+1. The CDK template must only contain one CDK Stack class, and the class must be called `CdkStack`. 
 
 ### How does this handler work?
 
@@ -51,8 +55,8 @@ This handler uses the stack's connection information to generate AWS environment
 those on the CDK process, ensuring that the AWS authentication configuration on the stack config and
 project is carried over to CDK without any need for additional arguments.
 
-**Important:** CDK creates CloudFormation-ready templates via `cdk package`, which uploads built
-artifacts to S3 in the process. This means that Sceptre commands that do not normally require S3
+**Important:** CDK creates CloudFormation-ready templates and uses `cdk_assets` to publish artifacts
+to S3 and ECR in the process. This means that Sceptre commands that do not normally require S3 and ECR
 actions (such as `generate`, `validate`, `diff`, and others) will require them when using this
 handler. You will need to ensure that any user or role executing these commands has proper
 permissions for these operations.

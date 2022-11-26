@@ -83,7 +83,7 @@ class CDK(TemplateHandler):
         """
 
         cmd_exists = shutil.which(cmd) is not None
-        self.logger.debug(f"command '{cmd}' exists: {cmd_exists}")
+        self.logger.debug(f"{self.name} - command '{cmd}' exists: {cmd_exists}")
         return cmd_exists
 
     def _node_package_exists(self, package) -> bool:
@@ -97,7 +97,7 @@ class CDK(TemplateHandler):
             shell=True,
             capture_output=True
         )
-        self.logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
+        self.logger.debug(f"{self.name} - Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
 
         if workspace_result.returncode == 0:
             package_exists = True
@@ -107,7 +107,7 @@ class CDK(TemplateHandler):
                 shell=True,
                 capture_output=True
             )
-            self.logger.debug(f"Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
+            self.logger.debug(f"f'{self.name} - Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
 
             if global_result.returncode == 0:
                 package_exists = True
@@ -150,7 +150,7 @@ class CDK(TemplateHandler):
 
         # Import CDK Python template module
         template_path = posixpath.join('templates', self.cdk_template_path)
-        self.logger.debug(f'Importing CDK Python template module {template_path}')
+        self.logger.debug(f'{self.name} - Importing CDK Python template module {template_path}')
         template_module_name = 'cdk_template'
         loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
         spec = importlib.util.spec_from_loader(template_module_name, loader)
@@ -158,7 +158,7 @@ class CDK(TemplateHandler):
         loader.exec_module(template_module)
 
         # CDK Synthesize App
-        self.logger.debug('CDK synthesing CdkStack Class')
+        self.logger.debug(f'{self.name} - CDK synthesing CdkStack Class')
         app = aws_cdk.App()
         stack_name = 'CDKStack'
         template_module.CdkStack(app, stack_name, self.sceptre_user_data)
@@ -173,17 +173,16 @@ class CDK(TemplateHandler):
                 break
         if asset_artifacts is None:
             raise exceptions.SceptreException('Asset manifest artifact not found')
-
         environment_variables = self._get_envs()
         # https://github.com/aws/aws-cdk/tree/main/packages/cdk-assets
-        self.logger.info('Publishing CDK Assets')
-        self.logger.debug(f'Assets manifest file: {asset_artifacts.file}')
+        self.logger.info(f'{self.name} - Publishing CDK Assets')
+        self.logger.debug(f'{self.name} - Assets manifest file: {asset_artifacts.file}')
         cdk_assets_result = subprocess.run(
             f'npx cdk-assets publish --path {asset_artifacts.file}',
             env=environment_variables,
             shell=True,
             capture_output=True)
-        self.logger.info(cdk_assets_result.stderr.decode())
+        self.logger.info(f'{self.name} - {cdk_assets_result.stderr.decode()}')
         cdk_assets_result.check_returncode()
 
         # Return synthesized template
