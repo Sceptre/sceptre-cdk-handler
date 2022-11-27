@@ -26,6 +26,7 @@ The template "type" for this handler is `cdk`.
 ### Arguments:
 
 * `path` (string, required): The path to the CDK template.
+* `context` (object, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html) for further info.
 
 #### CDK Template Requirements
 

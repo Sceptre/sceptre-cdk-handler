@@ -1,6 +1,7 @@
 import aws_cdk
 import importlib.machinery
 import importlib.util
+import logging
 import os
 import pathlib
 import posixpath
@@ -20,6 +21,14 @@ class CDK(TemplateHandler):
     build and package a CDK template and deploy it with Sceptre.
     """
 
+    class PrefixLoggerAdapter(logging.LoggerAdapter):
+        """
+        This logger adapter expects to be passed in a dict-like object with a
+        'prefix' key, whose value is prefixed to the log message.
+        """
+        def process(self, msg, kwargs):
+            return f'{self.extra["prefix"]} - {msg}', kwargs
+
     def __init__(self, *args, **kwargs):
         super(CDK, self).__init__(*args, **kwargs)
 
@@ -32,7 +41,7 @@ class CDK(TemplateHandler):
             "type": "object",
             "properties": {
                 "path": {"type": "string"},
-
+                "context": {"type": "object"}
             },
             "required": [
                 "path"
@@ -84,7 +93,7 @@ class CDK(TemplateHandler):
         """
 
         cmd_exists = shutil.which(cmd) is not None
-        self.logger.debug(f"{self.name} - command '{cmd}' exists: {cmd_exists}")
+        self.logger.debug(f"command '{cmd}' exists: {cmd_exists}")
         return cmd_exists
 
     def _node_package_exists(self, package) -> bool:
@@ -98,7 +107,7 @@ class CDK(TemplateHandler):
             shell=True,
             capture_output=True
         )
-        self.logger.debug(f"{self.name} - Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
+        self.logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
 
         if workspace_result.returncode == 0:
             package_exists = True
@@ -108,7 +117,7 @@ class CDK(TemplateHandler):
                 shell=True,
                 capture_output=True
             )
-            self.logger.debug(f"f'{self.name} - Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
+            self.logger.debug(f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
 
             if global_result.returncode == 0:
                 package_exists = True
@@ -127,7 +136,7 @@ class CDK(TemplateHandler):
         ]
         for cmd_prerequisite in cmd_prerequisites:
             if not self._cmd_exists(cmd_prerequisite):
-                raise exceptions.SceptreException(f"Command prerequisite '{cmd_prerequisite}' not found")
+                raise exceptions.SceptreException(f"{self.name} - Command prerequisite '{cmd_prerequisite}' not found")
 
         # Check Node Package Prerequisites
         node_prerequisites = [
@@ -135,7 +144,7 @@ class CDK(TemplateHandler):
         ]
         for node_prerequisite in node_prerequisites:
             if not self._node_package_exists(node_prerequisite):
-                raise exceptions.SceptreException(f"Node Package prerequisite '{node_prerequisite}' not found")
+                raise exceptions.SceptreException(f"{self.name} - Node Package prerequisite '{node_prerequisite}' not found")
 
     def handle(self) -> str:
         """
@@ -147,11 +156,13 @@ class CDK(TemplateHandler):
             CDK synthesised CloudFormation template
         """
 
+        self.logger = self.PrefixLoggerAdapter(self.logger, {'prefix': self.name})
+
         self._check_prerequisites()
 
         # Import CDK Python template module
         template_path = posixpath.join('templates', self.cdk_template_path)
-        self.logger.debug(f'{self.name} - Importing CDK Python template module {template_path}')
+        self.logger.debug(f'Importing CDK Python template module {template_path}')
         template_module_name = pathlib.Path(template_path).stem
         loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
         spec = importlib.util.spec_from_loader(template_module_name, loader)
@@ -159,8 +170,9 @@ class CDK(TemplateHandler):
         loader.exec_module(template_module)
 
         # CDK Synthesize App
-        self.logger.debug(f'{self.name} - CDK synthesing CdkStack Class')
-        app = aws_cdk.App()
+        self.logger.debug(f'CDK synthesing CdkStack Class')
+        self.logger.debug(f'CDK Context: {self.cdk_context}')
+        app = aws_cdk.App(context=self.cdk_context)
         stack_name = 'CDKStack'
         template_module.CdkStack(app, stack_name, self.sceptre_user_data)
         app_synth = app.synth()
@@ -173,17 +185,16 @@ class CDK(TemplateHandler):
                 asset_artifacts = artifacts
                 break
         if asset_artifacts is None:
-            raise exceptions.SceptreException('Asset manifest artifact not found')
+            raise exceptions.SceptreException(f'{self.name} - Asset manifest artifact not found')
         environment_variables = self._get_envs()
-        # https://github.com/aws/aws-cdk/tree/main/packages/cdk-assets
-        self.logger.info(f'{self.name} - Publishing CDK Assets')
-        self.logger.debug(f'{self.name} - Assets manifest file: {asset_artifacts.file}')
+        self.logger.info(f'Publishing CDK Assets')
+        self.logger.debug(f'Assets manifest file: {asset_artifacts.file}')
         cdk_assets_result = subprocess.run(
             f'npx cdk-assets publish --path {asset_artifacts.file}',
             env=environment_variables,
             shell=True,
             capture_output=True)
-        self.logger.info(f'{self.name} - {cdk_assets_result.stderr.decode()}')
+        self.logger.info(f'{cdk_assets_result.stderr.decode()}')
         cdk_assets_result.check_returncode()
 
         # Return synthesized template
@@ -197,3 +208,11 @@ class CDK(TemplateHandler):
         """
 
         return self.arguments['path']
+
+    @property
+    def cdk_context(self):
+        """
+        Returns the specified CDK context
+        """
+
+        return self.arguments.get('context')
