@@ -17,7 +17,9 @@ By using this handler, you can now use CDK templates with all your favorite Scep
 
 ## How to install sceptre-cdk-handler
 
-Simply `pip install sceptre-cdk-handler`. **Additionally, you need the [AWS CDK](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html) installed along with its prerequisites and the [CDK Assets](https://www.npmjs.com/package/cdk-assets) NPM packacge**.
+1) Install the Sceptre CDK handler using `pip install sceptre-cdk-handler`
+2) Install the AWS CDK following the instructions in [AWS CDK Getting Started]((https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html))
+3) Install the [CDK-Assets](https://www.npmjs.com/package/cdk-assets) NPM package using `npm install cdk-assets`
 
 ## How to use sceptre-cdk-handler
 
