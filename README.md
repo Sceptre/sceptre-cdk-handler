@@ -32,6 +32,12 @@ The template "type" for this handler is `cdk`.
 
 1. The CDK template must only contain one CDK Stack class, and the class must be called `CdkStack`. 
 
+#### CDK Feature Flags and Custom Bootstrap
+
+To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featureflags.html) or to specify a modified
+[CDK Bootstrap](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) qualifier, set these in the handler's
+`context` argument. See [sceptre-example](sceptre-example) for an example of this.
+
 ### How does this handler work?
 
 When using _only_ the CDK CLI (not Sceptre) to deploy using `cdk deploy`, the CDK CLI effectively performs

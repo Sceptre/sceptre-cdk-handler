@@ -3,6 +3,10 @@ project_code: sceptre
 account_id: 437373743264
 profile: account1
 cdk_context:
+  # CDK Bootstrap Qualifier
+  '@aws-cdk/core:bootstrapQualifier': hnb659fds
+
+  # CDK Feature Flags
   '@aws-cdk/aws-lambda:recognizeLayerVersion': true
   '@aws-cdk/core:checkSecretUsage': true
   '@aws-cdk/core:target-partitions':
