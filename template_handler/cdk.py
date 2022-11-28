@@ -184,9 +184,9 @@ class CDK(TemplateHandler):
                 asset_artifacts = artifacts
                 break
         if asset_artifacts is None:
-            raise exceptions.SceptreException(f'{self.name} - Asset manifest artifact not found')
+            raise exceptions.SceptreException(f'{self.name} - CDK Asset manifest artifact not found')
         environment_variables = self._get_envs()
-        self.logger.info(f'Publishing CDK Assets')
+        self.logger.info(f'Publishing CDK assets')
         self.logger.debug(f'Assets manifest file: {asset_artifacts.file}')
         cdk_assets_result = subprocess.run(
             f'npx cdk-assets publish --path {asset_artifacts.file}',
@@ -194,7 +194,8 @@ class CDK(TemplateHandler):
             shell=True,
             capture_output=True)
         self.logger.info(f'{cdk_assets_result.stderr.decode()}')
-        cdk_assets_result.check_returncode()
+        if cdk_assets_result.returncode != 0:
+            raise exceptions.SceptreException(f'{self.name} - Error publishing CDK assets')
 
         # Return synthesized template
         template = app_synth.get_stack_by_name(stack_name).template
