@@ -4,7 +4,6 @@ import importlib.util
 import logging
 import os
 import pathlib
-import posixpath
 import shutil
 import subprocess
 import yaml
@@ -161,7 +160,7 @@ class CDK(TemplateHandler):
         self._check_prerequisites()
 
         # Import CDK Python template module
-        template_path = posixpath.join('templates', self.cdk_template_path)
+        template_path = str(pathlib.Path('templates', self.cdk_template_path))
         self.logger.debug(f'Importing CDK Python template module {template_path}')
         template_module_name = pathlib.Path(template_path).stem
         loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
