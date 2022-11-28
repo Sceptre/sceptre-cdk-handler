@@ -28,9 +28,6 @@ class CDK(TemplateHandler):
         def process(self, msg, kwargs):
             return f'{self.extra["prefix"]} - {msg}', kwargs
 
-    def __init__(self, *args, **kwargs):
-        super(CDK, self).__init__(*args, **kwargs)
-
     def schema(self):
         """
         Return a JSON schema of the properties that this template handler requires.
