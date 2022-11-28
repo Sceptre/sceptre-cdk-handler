@@ -40,6 +40,8 @@ To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featuref
 [CDK Bootstrap](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) qualifier, set these in the handler's
 `context` argument. See [sceptre-example](sceptre-example) for an example of this.
 
+Reminder: the `context` argument is a standard Sceptre property, so resolvers and/or Jinja variables can be used in the value. 
+
 ### How does this handler work?
 
 When using _only_ the CDK CLI (not Sceptre) to deploy using `cdk deploy`, the CDK CLI effectively performs
