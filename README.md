@@ -69,6 +69,13 @@ actions (such as `generate`, `validate`, `diff`, and others) will require them w
 handler. You will need to ensure that any user or role executing these commands has proper
 permissions for these operations.
 
+### Sceptre Management of the CDK Bootstrap
+
+To optionally manage the CDK bootstrap CloudFormation template and stack with Sceptre, the bootstrap
+template can be generated using the AWS CDK CLI: `cdk bootstrap --show-template > cdk-bootstrap.yaml`.
+This can be deployed into a stack using the standard Sceptre process. Note: the stack needs to be called
+`CDKToolkit` so the `stack_name` property of the Sceptre config needs to specify this. 
+
 ### Example Sceptre CDK Stack
 
 [sceptre-example](sceptre-example)
