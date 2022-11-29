@@ -7,10 +7,12 @@ import pathlib
 import shutil
 import subprocess
 import yaml
+from aws_cdk.cx_api import CloudAssembly
 from botocore.credentials import Credentials
 from pathlib import Path
 from sceptre import exceptions
 from sceptre.template_handlers import TemplateHandler
+from types import ModuleType
 from typing import Dict
 
 DEFAULT_CLASS_NAME = 'CdkStack'
@@ -145,30 +147,50 @@ class CDK(TemplateHandler):
             if not self._node_package_exists(node_prerequisite):
                 raise exceptions.SceptreException(f"{self.name} - Node Package prerequisite '{node_prerequisite}' not found")
 
-    def handle(self) -> str:
+    def _import_python_template_module(self, cdk_template_path: str) -> ModuleType:
         """
-        Main Sceptre CDK Handler function
+        Import the CDK Python template module.
 
-        Returns
-        -------
-        str|bytes
-            CDK synthesised CloudFormation template
+        Args:
+            cdk_template_path: str - The path of the CDK Template
+
+        Returns:
+            A ModuleType object containing the imported CDK Python module
+
+        Raises:
+            SceptreException: Template File not found
+            SceptreException: importlib general exception
         """
-
-        self.logger = self.PrefixLoggerAdapter(self.logger, {'prefix': self.name})
-
-        self._check_prerequisites()
-
-        # Import CDK Python template module
-        template_path = str(pathlib.Path('templates', self.cdk_template_path))
+        template_path = str(pathlib.Path('templates', cdk_template_path).as_posix())
         self.logger.debug(f'Importing CDK Python template module {template_path}')
         template_module_name = pathlib.Path(template_path).stem
         loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
         spec = importlib.util.spec_from_loader(template_module_name, loader)
         template_module = importlib.util.module_from_spec(spec)
-        loader.exec_module(template_module)
 
-        # CDK Synthesize App
+        try:
+        loader.exec_module(template_module)
+        except FileNotFoundError as err:
+            raise exceptions.SceptreException(f'{self.name} - Template not found: {err.filename}')
+        except Exception as err:
+            raise exceptions.SceptreException(f'{self.name} - {err}')
+
+        return template_module
+
+    def _cdk_synthesize(self, stack_name: str, template_module: ModuleType) -> CloudAssembly:
+        """
+        Synthesize the CDK App.
+
+        Args:
+            stack_name: str - The name of the CDK stack
+            template_module: ModuleType - The imported CDK Python module
+
+        Returns:
+            A CloudAssembly object for the CDK stack
+
+        Raises:
+            SceptreException: CDK Class not found
+        """
         self.logger.debug(f'CDK synthesing CdkStack Class')
         self.logger.debug(f'CDK Context: {self.cdk_context}')
         app = aws_cdk.App(context=self.cdk_context)
@@ -178,8 +200,19 @@ class CDK(TemplateHandler):
             raise exceptions.SceptreException(f"{self.name} - CDK Class '{self.cdk_class_name}' not found.")
 
         stack_class(app, stack_name, self.sceptre_user_data)
+        return app.synth()
 
-        # Publish CDK Assets
+    def _publish_cdk_assets(self, app_synth: CloudAssembly) -> None:
+        """
+        Publishes the CDK Stack Assets.
+
+        Args:
+            app_synth: CloudAssembly - The Cloud Assembly of the CDK stack
+
+        Raises:
+            SceptreException: CDK Asset manifest artifact not found
+            SceptreException: Error publishing CDK assets
+        """
         asset_artifacts = None
 
         for artifacts in app_synth.artifacts:
@@ -200,8 +233,26 @@ class CDK(TemplateHandler):
         if cdk_assets_result.returncode != 0:
             raise exceptions.SceptreException(f'{self.name} - Error publishing CDK assets')
 
+    def handle(self) -> str:
+        """
+        Main Sceptre CDK Handler function
+
+        Returns:
+            str - The CDK synthesised CloudFormation template
+        """
+
+        internal_stack_name = 'CDKStack'
+
+        self.logger = self.PrefixLoggerAdapter(self.logger, {'prefix': self.name})
+
+        self._check_prerequisites()
+
+        module = self._import_python_template_module(cdk_template_path=self.cdk_template_path)
+        app_synth = self._cdk_synthesize(stack_name=internal_stack_name, template_module=module)
+        self._publish_cdk_assets(app_synth=app_synth)
+
         # Return synthesized template
-        template = app_synth.get_stack_by_name(stack_name).template
+        template = app_synth.get_stack_by_name(internal_stack_name).template
         return yaml.safe_dump(template)
 
     @property
