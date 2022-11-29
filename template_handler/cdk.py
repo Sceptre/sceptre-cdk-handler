@@ -69,7 +69,7 @@ class CDK(TemplateHandler):
         Returns:
             The dictionary of environment variables.
         """
-        envs = os.environ
+        envs = os.environ.copy()
         # Set aws environment variables specific to whatever AWS configuration has been set on the
         # stack's connection manager.
         credentials: Credentials = self.connection_manager._get_session(
