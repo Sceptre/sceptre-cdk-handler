@@ -31,6 +31,25 @@ The template "type" for this handler is `cdk`.
 * `class_name` (string, optional): The name of the Class in the CDK template to synthesize. Default: `CdkStack`.
 * `context` (object, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html) for further info.
 
+#### Passing Data to a CDK Stack
+
+There are two methods for passing data to a CDK Stack; using `sceptre_user_data` or CloudFormation parameters:
+
+##### Sceptre User Data
+
+Data can be passed to a CDK stack using the `sceptre_user_data` block of the Sceptre stack config. This will be resolved
+when the template is synthesized and can contain complex objects.
+
+##### CloudFormation Parameters
+
+Data can be passed to a synthesized CDK template using standard CloudFormation parameters. These are resolved when the
+CloudFormation stack is created from the template, but can only contain string or list values as supported by Cloudformation.
+
+#### Stack Outputs
+
+CloudFormation stack outputs can be defined in the CDK stack and then referenced from other Sceptre stacks using the
+standard Sceptre `!stack_output` resolver. 
+
 #### CDK Feature Flags and Custom Bootstrap
 
 To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featureflags.html) or to specify a modified
@@ -73,8 +92,7 @@ permissions for these operations.
 
 To optionally manage the CDK bootstrap CloudFormation template and stack with Sceptre, the bootstrap
 template can be generated using the AWS CDK CLI: `cdk bootstrap --show-template > cdk-bootstrap.yaml`.
-This can be deployed into a stack using the standard Sceptre process. Note: the stack needs to be called
-`CDKToolkit` so the `stack_name` property of the Sceptre config needs to specify this. 
+This can be deployed into a stack using the standard Sceptre process. 
 
 ### Example Sceptre CDK Stack
 

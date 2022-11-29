@@ -4,4 +4,6 @@ template:
   context: {{ cdk_context }}
   class_name: CdkStack
 sceptre_user_data:
-  bucket_name: mybucket-{{ account_id }}-{{ region }}
+  object_name: object-key.txt
+parameters:
+  BucketName: mybucket-{{ account_id }}-{{ region }}
