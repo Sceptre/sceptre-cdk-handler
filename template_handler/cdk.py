@@ -188,7 +188,7 @@ class CDK(TemplateHandler):
         template_module = importlib.util.module_from_spec(spec)
 
         try:
-        loader.exec_module(template_module)
+            loader.exec_module(template_module)
         except FileNotFoundError as err:
             raise exceptions.SceptreException(f'{self.name} - Template not found: {err.filename}')
         except Exception as err:
