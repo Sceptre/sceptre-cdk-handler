@@ -25,6 +25,8 @@ class CDK(TemplateHandler):
 
     class PrefixLoggerAdapter(logging.LoggerAdapter):
         """
+        Logger Adapter to specify a standard log entry prefix
+
         This logger adapter expects to be passed in a dict-like object with a
         'prefix' key, whose value is prefixed to the log message.
         """
@@ -50,7 +52,8 @@ class CDK(TemplateHandler):
         }
 
     def _get_envs(self) -> Dict[str, str]:
-        """Obtains the environment variables to pass to the subprocess.
+        """
+        Obtains the environment variables to pass to the subprocess.
 
         Sceptre can assume roles, profiles, etc... to connect to AWS for a given stack. This is
         very useful. However, we need that SAME connection information to carry over to SAM when we
@@ -88,18 +91,30 @@ class CDK(TemplateHandler):
 
         return envs
 
-    def _cmd_exists(self, cmd) -> bool:
+    def _cmd_exists(self, cmd: str) -> bool:
         """
-        Checks whether a specified CLI command exists
+        Checks whether a specified CLI command exists.
+
+        Args:
+            cmd: str - The name of the CLI command to check
+
+        Returns:
+            bool
         """
 
         cmd_exists = shutil.which(cmd) is not None
         self.logger.debug(f"command '{cmd}' exists: {cmd_exists}")
         return cmd_exists
 
-    def _node_package_exists(self, package) -> bool:
+    def _node_package_exists(self, package: str) -> bool:
         """
-        Checks whether a specifie Node package exists either in the workspace or global scope
+        Checks whether a specifie Node package exists either in the workspace or global scope.
+
+        Args:
+            package: str - The name of the node package to check
+
+        Returns:
+            bool
         """
 
         package_exists = False
@@ -127,7 +142,11 @@ class CDK(TemplateHandler):
 
     def _check_prerequisites(self) -> None:
         """
-        Checks the command and Node package requirements for the handler
+        Checks the command and Node package requirements for the handler.
+
+        Raises:
+            SceptreException: Command prerequisite not found
+            SceptreException: Node Package prerequisite not found
         """
 
         # Check Command Prerequisites
@@ -258,15 +277,21 @@ class CDK(TemplateHandler):
     @property
     def cdk_template_path(self) -> Path:
         """
-        Returns the specified CDK template path
+        CDK Template Path property handler.
+
+        Returns:
+            The specified CDK template path.
         """
 
         return self.arguments['path']
 
     @property
-    def cdk_context(self):
+    def cdk_context(self) -> dict:
         """
-        Returns the specified CDK context
+        CDK Context property handler.
+
+        Returns:
+            The specified CDK context.
         """
 
         return self.arguments.get('context')
@@ -274,7 +299,10 @@ class CDK(TemplateHandler):
     @property
     def cdk_class_name(self) -> str:
         """
-        Returns the specified CDK class name.
+        CDK Class Name property handler.
+
+        Returns:
+            The specified CDK class name.
         """
 
         return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
