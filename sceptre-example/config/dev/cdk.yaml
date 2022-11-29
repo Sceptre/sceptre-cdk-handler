@@ -2,5 +2,6 @@ template:
   type: cdk
   path: CDK/s3.py
   context: {{ cdk_context }}
+  class_name: CdkStack
 sceptre_user_data:
   bucket_name: mybucket-{{ account_id }}-{{ region }}

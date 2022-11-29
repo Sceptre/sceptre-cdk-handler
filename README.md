@@ -28,11 +28,8 @@ The template "type" for this handler is `cdk`.
 ### Arguments:
 
 * `path` (string, required): The path to the CDK template.
+* `class_name` (string, optional): The name of the Class in the CDK template to synthesize. Default: `CdkStack`.
 * `context` (object, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html) for further info.
-
-#### CDK Template Requirements
-
-1. The CDK template must only contain one CDK Stack class, and the class must be called `CdkStack`. 
 
 #### CDK Feature Flags and Custom Bootstrap
 

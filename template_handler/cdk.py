@@ -13,6 +13,7 @@ from sceptre import exceptions
 from sceptre.template_handlers import TemplateHandler
 from typing import Dict
 
+DEFAULT_CLASS_NAME = 'CdkStack'
 
 class CDK(TemplateHandler):
     """
@@ -31,13 +32,15 @@ class CDK(TemplateHandler):
     def schema(self):
         """
         Return a JSON schema of the properties that this template handler requires.
+
         Reference: https://github.com/Julian/jsonschema
         """
         return {
             "type": "object",
             "properties": {
                 "path": {"type": "string"},
-                "context": {"type": "object"}
+                "context": {"type": "object"},
+                "class_name": {"type": "string"}
             },
             "required": [
                 "path"
@@ -169,9 +172,12 @@ class CDK(TemplateHandler):
         self.logger.debug(f'CDK synthesing CdkStack Class')
         self.logger.debug(f'CDK Context: {self.cdk_context}')
         app = aws_cdk.App(context=self.cdk_context)
-        stack_name = 'CDKStack'
-        template_module.CdkStack(app, stack_name, self.sceptre_user_data)
-        app_synth = app.synth()
+        try:
+            stack_class = getattr(template_module, self.cdk_class_name)
+        except Exception:
+            raise exceptions.SceptreException(f"{self.name} - CDK Class '{self.cdk_class_name}' not found.")
+
+        stack_class(app, stack_name, self.sceptre_user_data)
 
         # Publish CDK Assets
         asset_artifacts = None
@@ -213,3 +219,11 @@ class CDK(TemplateHandler):
         """
 
         return self.arguments.get('context')
+
+    @property
+    def cdk_class_name(self) -> str:
+        """
+        Returns the specified CDK class name.
+        """
+
+        return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
