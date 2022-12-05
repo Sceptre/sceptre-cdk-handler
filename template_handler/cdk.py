@@ -51,6 +51,26 @@ class CDK(TemplateHandler):
             ]
         }
 
+    def _subprocess_run(self, cmd: str, env: Dict[str, str] = None) -> subprocess.CompletedProcess:
+        """
+        Run a command
+
+        Args:
+            cmd: str - The command to run
+            env: Dict[str, str] - The environment variables to pass to the command
+
+        Returns:
+            subprocess.CompletedProcess
+        """
+        result = subprocess.run(
+            cmd,
+            env=env,
+            shell=True,
+            capture_output=True
+        )
+
+        return result
+
     def _get_envs(self) -> Dict[str, str]:
         """
         Obtains the environment variables to pass to the subprocess.
@@ -118,21 +138,13 @@ class CDK(TemplateHandler):
         """
 
         package_exists = False
-        workspace_result = subprocess.run(
-            f'npm list {package}',
-            shell=True,
-            capture_output=True
-        )
+        workspace_result = self._subprocess_run(f'npm list {package}')
         self.logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
 
         if workspace_result.returncode == 0:
             package_exists = True
         else:
-            global_result = subprocess.run(
-                f'npm --global list {package}',
-                shell=True,
-                capture_output=True
-            )
+            global_result = self._subprocess_run(f'npm --global list {package}')
             self.logger.debug(f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
 
             if global_result.returncode == 0:
@@ -243,11 +255,9 @@ class CDK(TemplateHandler):
         environment_variables = self._get_envs()
         self.logger.info(f'Publishing CDK assets')
         self.logger.debug(f'Assets manifest file: {asset_artifacts.file}')
-        cdk_assets_result = subprocess.run(
+        cdk_assets_result = self._subprocess_run(
             f'npx cdk-assets publish --path {asset_artifacts.file}',
-            env=environment_variables,
-            shell=True,
-            capture_output=True)
+            env=environment_variables)
         self.logger.info(f'{cdk_assets_result.stderr.decode()}')
         if cdk_assets_result.returncode != 0:
             raise exceptions.SceptreException(f'{self.name} - Error publishing CDK assets')
