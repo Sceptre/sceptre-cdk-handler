@@ -23,6 +23,8 @@ class CDK(TemplateHandler):
     build and package a CDK template and deploy it with Sceptre.
     """
 
+    _internal_stack_name = 'CDKStack'
+
     class PrefixLoggerAdapter(logging.LoggerAdapter):
         """
         Logger Adapter to specify a standard log entry prefix
@@ -270,18 +272,17 @@ class CDK(TemplateHandler):
             str - The CDK synthesised CloudFormation template
         """
 
-        internal_stack_name = 'CDKStack'
 
         self.logger = self.PrefixLoggerAdapter(self.logger, {'prefix': self.name})
 
         self._check_prerequisites()
 
         module = self._import_python_template_module(cdk_template_path=self.cdk_template_path)
-        app_synth = self._cdk_synthesize(stack_name=internal_stack_name, template_module=module)
+        app_synth = self._cdk_synthesize(stack_name=self._internal_stack_name, template_module=module)
         self._publish_cdk_assets(app_synth=app_synth)
 
         # Return synthesized template
-        template = app_synth.get_stack_by_name(internal_stack_name).template
+        template = app_synth.get_stack_by_name(self._internal_stack_name).template
         return yaml.safe_dump(template)
 
     @property
