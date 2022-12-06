@@ -1,31 +1,32 @@
 from setuptools import setup, find_packages
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 # More information on setting values:
 # https://github.com/Sceptre/project/wiki/sceptre-template-handler-template
 
 # lowercase, use `-` as separator.
-TEMPLATE_HANDLER_NAME = 'custom-template-handler'
+TEMPLATE_HANDLER_NAME = 'sceptre-cdk-handler'
 # the template_handler call in sceptre e.g. type: custom_template_handler.
-TEMPLATE_HANDLER_TYPE = 'custom_template_handler'
+TEMPLATE_HANDLER_TYPE = 'cdk'
 # do not change. Rename template_handler/template_handler.py to template_handler/{TEMPLATE_HANDLER_TYPE}.py
-TEMPLATE_HANDLER_MODULE_NAME = 'template_handler.{}'.format(TEMPLATE_HANDLER_TYPE)
+TEMPLATE_HANDLER_MODULE_NAME = f'template_handler.{TEMPLATE_HANDLER_TYPE}'
 # CamelCase name of template_handler class in template_handler.template_handler.
-TEMPLATE_HANDLER_CLASS = 'CustomTemplateHandler'
+TEMPLATE_HANDLER_CLASS = 'CDK'
 # One line summary description
-TEMPLATE_HANDLER_DESCRIPTION = 'A Custom Template Handler'
+TEMPLATE_HANDLER_DESCRIPTION = 'AWS CDK Template Handler'
 # if multiple use a single string with comma separated names.
 TEMPLATE_HANDLER_AUTHOR = 'Sceptre'
 # if multiple use single string with commas.
 TEMPLATE_HANDLER_AUTHOR_EMAIL = 'sceptre@sceptre.org'
-TEMPLATE_HANDLER_URL = 'https://github.com/sceptre/{}'.format(TEMPLATE_HANDLER_NAME)
+TEMPLATE_HANDLER_URL = f'https://github.com/sceptre/{TEMPLATE_HANDLER_NAME}'
 
 with open("README.md") as readme_file:
     README = readme_file.read()
 
 install_requirements = [
-    "sceptre>=2.7"
+    "sceptre>=2.7",
+    "aws_cdk-lib>=2.51.1"
 ]
 
 test_requirements = [

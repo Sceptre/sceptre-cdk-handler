@@ -1,0 +1,10 @@
+[tool.coverage.run]
+branch = true
+source = [ "template_handler" ]
+
+[tool.coverage.report]
+exclude_lines = [ ]
+show_missing = true
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report term-missing"
