@@ -69,11 +69,13 @@ class CdkBuilder:
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
+        environment_variables=os.environ
     ):
         self._logger = logger
         self._connection_manager = connection_manager
         self._subprocess_run = subprocess_run
         self._app_class = app_class
+        self._environment_variables = environment_variables
 
     def build_template(
         self,
@@ -100,11 +102,11 @@ class CdkBuilder:
 
     def _publish(self, cloud_assembly: CloudAssembly):
         asset_artifacts = None
-
         for artifacts in cloud_assembly.artifacts:
             if isinstance(artifacts, aws_cdk.cx_api.AssetManifestArtifact):
                 asset_artifacts = artifacts
                 break
+
         if asset_artifacts is None:
             raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
 
@@ -120,7 +122,8 @@ class CdkBuilder:
         return cloud_assembly.get_stack_by_name(self._internal_stack_name).template
 
     def _run_command(self, command: str, env: Dict[str, str] = None):
-        # TODO: Determine how we need to deal with current working directory and such
+        # We're assuming here that the cwd is the directory to run the command from. I'm not certain
+        # that will always be correct...
         result = subprocess.run(
             command,
             env=env,
@@ -149,7 +152,7 @@ class CdkBuilder:
         Returns:
             The dictionary of environment variables.
         """
-        envs = os.environ.copy()
+        envs = self._environment_variables.copy()
         # Set aws environment variables specific to whatever AWS configuration has been set on the
         # stack's connection manager.
         credentials: Credentials = self._connection_manager._get_session(
@@ -257,7 +260,6 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
-        self._check_prerequisites()
         stack_class = self._importer.import_class(self.cdk_template_path, self.cdk_class_name)
         template_dict = self._cdk_buidler.build_template(
             stack_class,
