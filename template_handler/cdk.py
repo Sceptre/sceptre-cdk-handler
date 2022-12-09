@@ -1,74 +1,132 @@
-import aws_cdk
 import importlib.machinery
 import importlib.util
 import logging
 import os
 import pathlib
-import shutil
 import subprocess
+import sys
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+import aws_cdk
 import yaml
 from aws_cdk.cx_api import CloudAssembly
 from botocore.credentials import Credentials
-from pathlib import Path
 from sceptre import exceptions
+from sceptre.connection_manager import ConnectionManager
+from sceptre.helpers import normalise_path
 from sceptre.template_handlers import TemplateHandler
-from types import ModuleType
-from typing import Dict
+
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol
 
 DEFAULT_CLASS_NAME = 'CdkStack'
 
-class CDK(TemplateHandler):
-    """
-    A template handler for AWS CDK templates. Using this will allow Sceptre to work with the AWS CDK to
-    build and package a CDK template and deploy it with Sceptre.
-    """
 
-    _internal_stack_name = 'CDKStack'
+class SceptreCdkStackConstructor(Protocol):
+    def __call__(self, scope: aws_cdk.App, id: str, sceptre_user_data: Any) -> aws_cdk.Stack: ...
 
-    class PrefixLoggerAdapter(logging.LoggerAdapter):
+
+class ClassImporter:
+    def import_class(self, template_path: Path, class_name: str) -> SceptreCdkStackConstructor:
         """
-        Logger Adapter to specify a standard log entry prefix
-
-        This logger adapter expects to be passed in a dict-like object with a
-        'prefix' key, whose value is prefixed to the log message.
-        """
-        def process(self, msg, kwargs):
-            return f'{self.extra["prefix"]} - {msg}', kwargs
-
-    def schema(self):
-        """
-        Return a JSON schema of the properties that this template handler requires.
-
-        Reference: https://github.com/Julian/jsonschema
-        """
-        return {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "context": {"type": "object"},
-                "class_name": {"type": "string"}
-            },
-            "required": [
-                "path"
-            ]
-        }
-
-    def _subprocess_run(self, cmd: str, env: Dict[str, str] = None) -> subprocess.CompletedProcess:
-        """
-        Run a command
+        Import the CDK Python template module.
 
         Args:
-            cmd: str - The command to run
-            env: Dict[str, str] - The environment variables to pass to the command
+            template_path: The path of the CDK Template
+            class_name: The name of the class
 
         Returns:
-            subprocess.CompletedProcess
+            A ModuleType object containing the imported CDK Python module
+
+        Raises:
+            SceptreException: Template File not found
+            SceptreException: importlib general exception
         """
+        template_module_name = template_path.stem
+        loader = importlib.machinery.SourceFileLoader(template_module_name, str(template_path))
+        spec = importlib.util.spec_from_loader(template_module_name, loader)
+        template_module = importlib.util.module_from_spec(spec)
+        loader.exec_module(template_module)
+
+        try:
+            return getattr(template_module, class_name)
+        except AttributeError:
+            raise exceptions.SceptreException(
+                f"No class named  {class_name} on template at {template_path}"
+            )
+
+
+class CdkBuilder:
+    _internal_stack_name = 'CDKStack'
+
+    def __init__(
+        self,
+        logger: logging.Logger,
+        connection_manager: ConnectionManager,
+        *,
+        subprocess_run=subprocess.run,
+        app_class=aws_cdk.App,
+    ):
+        self._logger = logger
+        self._connection_manager = connection_manager
+        self._subprocess_run = subprocess_run
+        self._app_class = app_class
+
+    def build_template(
+        self,
+        stack_class: SceptreCdkStackConstructor,
+        cdk_context: Optional[dict],
+        sceptre_user_data: Any
+    ) -> dict:
+        assembly = self._synthesize(stack_class, cdk_context, sceptre_user_data)
+        self._publish(assembly)
+        template = self._get_template(assembly)
+        return template
+
+    def _synthesize(
+        self,
+        stack_class: SceptreCdkStackConstructor,
+        cdk_context: Optional[dict],
+        sceptre_user_data: Any
+    ) -> CloudAssembly:
+        self._logger.debug(f'CDK synthesing CdkStack Class')
+        self._logger.debug(f'CDK Context: {cdk_context}')
+        app = self._app_class(context=cdk_context)
+        stack_class(app, self._internal_stack_name, sceptre_user_data)
+        return app.synth()
+
+    def _publish(self, cloud_assembly: CloudAssembly):
+        asset_artifacts = None
+
+        for artifacts in cloud_assembly.artifacts:
+            if isinstance(artifacts, aws_cdk.cx_api.AssetManifestArtifact):
+                asset_artifacts = artifacts
+                break
+        if asset_artifacts is None:
+            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+
+        environment_variables = self._get_envs()
+        self._logger.info(f'Publishing CDK assets')
+        self._logger.debug(f'Assets manifest file: {asset_artifacts.file}')
+        self._subprocess_run(
+            f'npx cdk-assets publish --path {asset_artifacts.file}',
+            env=environment_variables
+        )
+
+    def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
+        return cloud_assembly.get_stack_by_name(self._internal_stack_name).template
+
+    def _run_command(self, command: str, env: Dict[str, str] = None):
+        # TODO: Determine how we need to deal with current working directory and such
         result = subprocess.run(
-            cmd,
+            command,
             env=env,
             shell=True,
-            capture_output=True
+            stdout=sys.stderr,
+            check=True
         )
 
         return result
@@ -78,7 +136,7 @@ class CDK(TemplateHandler):
         Obtains the environment variables to pass to the subprocess.
 
         Sceptre can assume roles, profiles, etc... to connect to AWS for a given stack. This is
-        very useful. However, we need that SAME connection information to carry over to SAM when we
+        very useful. However, we need that SAME connection information to carry over to CDK when we
         invoke it. The most precise way to do this is to use the same session credentials being used
         by Sceptre for other stack operations. This method obtains those credentials and sets them
         as environment variables that are passed to the subprocess and will, in turn, be used by
@@ -94,10 +152,10 @@ class CDK(TemplateHandler):
         envs = os.environ.copy()
         # Set aws environment variables specific to whatever AWS configuration has been set on the
         # stack's connection manager.
-        credentials: Credentials = self.connection_manager._get_session(
-            self.connection_manager.profile,
-            self.connection_manager.region,
-            self.connection_manager.iam_role
+        credentials: Credentials = self._connection_manager._get_session(
+            self._connection_manager.profile,
+            self._connection_manager.region,
+            self._connection_manager.iam_role
         ).get_credentials()
         envs.update(
             AWS_ACCESS_KEY_ID=credentials.access_key,
@@ -113,177 +171,33 @@ class CDK(TemplateHandler):
 
         return envs
 
-    def _cmd_exists(self, cmd: str) -> bool:
-        """
-        Checks whether a specified CLI command exists.
 
-        Args:
-            cmd: str - The name of the CLI command to check
+class CDK(TemplateHandler):
+    """
+    A template handler for AWS CDK templates. Using this will allow Sceptre to work with the AWS CDK to
+    build and package a CDK template and deploy it with Sceptre.
+    """
 
-        Returns:
-            bool
-        """
-
-        cmd_exists = shutil.which(cmd) is not None
-        self.logger.debug(f"command '{cmd}' exists: {cmd_exists}")
-        return cmd_exists
-
-    def _node_package_exists(self, package: str) -> bool:
-        """
-        Checks whether a specifie Node package exists either in the workspace or global scope.
-
-        Args:
-            package: str - The name of the node package to check
-
-        Returns:
-            bool
-        """
-
-        package_exists = False
-        workspace_result = self._subprocess_run(f'npm list {package}')
-        self.logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
-
-        if workspace_result.returncode == 0:
-            package_exists = True
-        else:
-            global_result = self._subprocess_run(f'npm --global list {package}')
-            self.logger.debug(f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
-
-            if global_result.returncode == 0:
-                package_exists = True
-
-        return package_exists
-
-    def _check_prerequisites(self) -> None:
-        """
-        Checks the command and Node package requirements for the handler.
-
-        Raises:
-            SceptreException: Command prerequisite not found
-            SceptreException: Node Package prerequisite not found
-        """
-
-        # Check Command Prerequisites
-        cmd_prerequisites = [
-            'node',
-            'npx'
-        ]
-        for cmd_prerequisite in cmd_prerequisites:
-            if not self._cmd_exists(cmd_prerequisite):
-                raise exceptions.SceptreException(f"{self.name} - Command prerequisite '{cmd_prerequisite}' not found")
-
-        # Check Node Package Prerequisites
-        node_prerequisites = [
-            'cdk-assets'
-        ]
-        for node_prerequisite in node_prerequisites:
-            if not self._node_package_exists(node_prerequisite):
-                raise exceptions.SceptreException(f"{self.name} - Node Package prerequisite '{node_prerequisite}' not found")
-
-    def _import_python_template_module(self, cdk_template_path: str) -> ModuleType:
-        """
-        Import the CDK Python template module.
-
-        Args:
-            cdk_template_path: str - The path of the CDK Template
-
-        Returns:
-            A ModuleType object containing the imported CDK Python module
-
-        Raises:
-            SceptreException: Template File not found
-            SceptreException: importlib general exception
-        """
-        template_path = str(pathlib.Path('templates', cdk_template_path).as_posix())
-        self.logger.debug(f'Importing CDK Python template module {template_path}')
-        template_module_name = pathlib.Path(template_path).stem
-        loader = importlib.machinery.SourceFileLoader(template_module_name, template_path)
-        spec = importlib.util.spec_from_loader(template_module_name, loader)
-        template_module = importlib.util.module_from_spec(spec)
-
-        try:
-            loader.exec_module(template_module)
-        except FileNotFoundError as err:
-            raise exceptions.SceptreException(f'{self.name} - Template not found: {err.filename}')
-        except Exception as err:
-            raise exceptions.SceptreException(f'{self.name} - {err}')
-
-        return template_module
-
-    def _cdk_synthesize(self, stack_name: str, template_module: ModuleType) -> CloudAssembly:
-        """
-        Synthesize the CDK App.
-
-        Args:
-            stack_name: str - The name of the CDK stack
-            template_module: ModuleType - The imported CDK Python module
-
-        Returns:
-            A CloudAssembly object for the CDK stack
-
-        Raises:
-            SceptreException: CDK Class not found
-        """
-        self.logger.debug(f'CDK synthesing CdkStack Class')
-        self.logger.debug(f'CDK Context: {self.cdk_context}')
-        app = aws_cdk.App(context=self.cdk_context)
-        try:
-            stack_class = getattr(template_module, self.cdk_class_name)
-        except Exception:
-            raise exceptions.SceptreException(f"{self.name} - CDK Class '{self.cdk_class_name}' not found.")
-
-        stack_class(app, stack_name, self.sceptre_user_data)
-        return app.synth()
-
-    def _publish_cdk_assets(self, app_synth: CloudAssembly) -> None:
-        """
-        Publishes the CDK Stack Assets.
-
-        Args:
-            app_synth: CloudAssembly - The Cloud Assembly of the CDK stack
-
-        Raises:
-            SceptreException: CDK Asset manifest artifact not found
-            SceptreException: Error publishing CDK assets
-        """
-        asset_artifacts = None
-
-        for artifacts in app_synth.artifacts:
-            if isinstance(artifacts, aws_cdk.cx_api.AssetManifestArtifact):
-                asset_artifacts = artifacts
-                break
-        if asset_artifacts is None:
-            raise exceptions.SceptreException(f'{self.name} - CDK Asset manifest artifact not found')
-        environment_variables = self._get_envs()
-        self.logger.info(f'Publishing CDK assets')
-        self.logger.debug(f'Assets manifest file: {asset_artifacts.file}')
-        cdk_assets_result = self._subprocess_run(
-            f'npx cdk-assets publish --path {asset_artifacts.file}',
-            env=environment_variables)
-        self.logger.info(f'{cdk_assets_result.stderr.decode()}')
-        if cdk_assets_result.returncode != 0:
-            raise exceptions.SceptreException(f'{self.name} - Error publishing CDK assets')
-
-    def handle(self) -> str:
-        """
-        Main Sceptre CDK Handler function
-
-        Returns:
-            str - The CDK synthesised CloudFormation template
-        """
-
-
-        self.logger = self.PrefixLoggerAdapter(self.logger, {'prefix': self.name})
-
-        self._check_prerequisites()
-
-        module = self._import_python_template_module(cdk_template_path=self.cdk_template_path)
-        app_synth = self._cdk_synthesize(stack_name=self._internal_stack_name, template_module=module)
-        self._publish_cdk_assets(app_synth=app_synth)
-
-        # Return synthesized template
-        template = app_synth.get_stack_by_name(self._internal_stack_name).template
-        return yaml.safe_dump(template)
+    def __init__(
+        self,
+        name: str,
+        arguments: dict = None,
+        sceptre_user_data: Any = None,
+        connection_manager: ConnectionManager = None,
+        stack_group_config: dict = None,
+        *,
+        importer_class=ClassImporter,
+        cdk_builder_class=CdkBuilder
+    ):
+        super().__init__(
+            name=name,
+            arguments=arguments,
+            sceptre_user_data=sceptre_user_data,
+            connection_manager=connection_manager,
+            stack_group_config=stack_group_config
+        )
+        self._importer = importer_class()
+        self._cdk_buidler = cdk_builder_class(self.logger, self.connection_manager)
 
     @property
     def cdk_template_path(self) -> Path:
@@ -294,7 +208,7 @@ class CDK(TemplateHandler):
             The specified CDK template path.
         """
 
-        return self.arguments['path']
+        return self._resolve_template_path(self.arguments['path'])
 
     @property
     def cdk_context(self) -> dict:
@@ -317,3 +231,51 @@ class CDK(TemplateHandler):
         """
 
         return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
+
+    def schema(self):
+        """
+        Return a JSON schema of the properties that this template handler requires.
+
+        Reference: https://github.com/Julian/jsonschema
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "context": {"type": "object"},
+                "class_name": {"type": "string"}
+            },
+            "required": [
+                "path"
+            ]
+        }
+
+    def handle(self) -> str:
+        """
+        Main Sceptre CDK Handler function
+
+        Returns:
+            str - The CDK synthesised CloudFormation template
+        """
+        self._check_prerequisites()
+        stack_class = self._importer.import_class(self.cdk_template_path, self.cdk_class_name)
+        template_dict = self._cdk_buidler.build_template(
+            stack_class,
+            self.cdk_context,
+            self.sceptre_user_data
+        )
+        return yaml.safe_dump(template_dict)
+
+    def _resolve_template_path(self, template_path):
+        """
+        Return the project_path joined to template_path as
+        a string.
+
+        Note that os.path.join defers to an absolute path
+        if the input is absolute.
+        """
+        return pathlib.Path(
+            self.stack_group_config["project_path"],
+            "templates",
+            normalise_path(template_path)
+        )
