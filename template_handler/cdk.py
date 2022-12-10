@@ -202,6 +202,24 @@ class CDK(TemplateHandler):
         self._importer = importer_class()
         self._cdk_buidler = cdk_builder_class(self.logger, self.connection_manager)
 
+    def schema(self):
+        """
+        Return a JSON schema of the properties that this template handler requires.
+
+        Reference: https://github.com/Julian/jsonschema
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "context": {"type": "object"},
+                "class_name": {"type": "string"}
+            },
+            "required": [
+                "path"
+            ]
+        }
+
     @property
     def cdk_template_path(self) -> Path:
         """
@@ -234,24 +252,6 @@ class CDK(TemplateHandler):
         """
 
         return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
-
-    def schema(self):
-        """
-        Return a JSON schema of the properties that this template handler requires.
-
-        Reference: https://github.com/Julian/jsonschema
-        """
-        return {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "context": {"type": "object"},
-                "class_name": {"type": "string"}
-            },
-            "required": [
-                "path"
-            ]
-        }
 
     def handle(self) -> str:
         """

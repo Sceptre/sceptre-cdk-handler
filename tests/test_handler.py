@@ -5,15 +5,17 @@ import os
 import shutil
 import subprocess
 import textwrap
+from pathlib import Path
 from unittest import TestCase
 
 import pytest
+import yaml
 from aws_cdk.cx_api import CloudAssembly
 from botocore.credentials import Credentials
 from boto3.session import Session
 from sceptre import exceptions
-from template_handler.cdk import CDK
-from unittest.mock import Mock, MagicMock
+from template_handler.cdk import CDK, ClassImporter, CdkBuilder, DEFAULT_CLASS_NAME
+from unittest.mock import Mock, MagicMock, create_autospec
 from sceptre.connection_manager import ConnectionManager
 
 # name = 'dev/cdk'
@@ -36,20 +38,77 @@ from sceptre.connection_manager import ConnectionManager
 
 
 class TestCDK(TestCase):
-    def test_handle__class_name_as_argument__imports_named_class_from_specified_template_path(self):
-        assert False
+    def setUp(self):
+        self.name = "CDK"
+        self.connection_manager = Mock(ConnectionManager)
+        self.arguments = {
+            'path': 'my/template/path.py',
+            'context': {
+                '@aws-cdk/core:bootstrapQualifier': 'hnb659fds'
+            }
+        }
+        self.sceptre_user_data = {
+            'key': 'value'
+        }
+        self.stack_group_config = {
+            'project_path': 'root_sceptre_dir'
+        }
+        self.importer_class = create_autospec(ClassImporter)
+        self.template_dict = {'Resources': {}}
+        self.builder_class = create_autospec(CdkBuilder)
+        self.builder_class.return_value.build_template.return_value = self.template_dict
 
-    def test_handle__project_directory_is_different_from_cwd__imports_class_from_project_directory(self):
-        assert False
+    @property
+    def handler(self) -> CDK:
+        return CDK(
+            self.name,
+            self.arguments,
+            self.sceptre_user_data,
+            self.connection_manager,
+            self.stack_group_config,
+            importer_class=self.importer_class,
+            cdk_builder_class=self.builder_class
+        )
+
+    def test_handle__class_name_as_argument__imports_named_class_from_specified_template_path(self):
+        self.arguments['class_name'] = "MyFancyClass"
+        self.handler.handle()
+
+        expected_template_path = Path(
+            self.stack_group_config['project_path'],
+            'templates',
+            self.arguments['path']
+        )
+        self.importer_class.return_value.import_class.assert_any_call(
+            expected_template_path,
+            'MyFancyClass'
+        )
 
     def test_handle__no_class_name_argument__imports_default_class_name_from_template_path(self):
-        assert False
+        self.handler.handle()
+
+        expected_template_path = Path(
+            self.stack_group_config['project_path'],
+            'templates',
+            self.arguments['path']
+        )
+        self.importer_class.return_value.import_class.assert_any_call(
+            expected_template_path,
+            DEFAULT_CLASS_NAME
+        )
 
     def test_handle__builds_template_for_imported_stack_with_context_and_sceptre_user_data(self):
-        assert False
+        self.handler.handle()
+        self.builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            self.arguments['context'],
+            self.sceptre_user_data
+        )
 
     def test_handle__returns_dumped_yaml_template(self):
-        assert False
+        result = self.handler.handle()
+        expected = yaml.dump(self.template_dict)
+        self.assertEqual(expected, result)
 
 
 class TestCdkBuilder(TestCase):
