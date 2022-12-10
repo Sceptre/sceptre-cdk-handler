@@ -60,7 +60,7 @@ class ClassImporter:
 
 
 class CdkBuilder:
-    _internal_stack_name = 'CDKStack'
+    STACK_LOGICAL_ID = 'CDKStack'
 
     def __init__(
         self,
@@ -97,7 +97,7 @@ class CdkBuilder:
         self._logger.debug(f'CDK synthesing CdkStack Class')
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
-        stack_class(app, self._internal_stack_name, sceptre_user_data)
+        stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data)
         return app.synth()
 
     def _publish(self, cloud_assembly: CloudAssembly):
@@ -113,18 +113,18 @@ class CdkBuilder:
         environment_variables = self._get_envs()
         self._logger.info(f'Publishing CDK assets')
         self._logger.debug(f'Assets manifest file: {asset_artifacts.file}')
-        self._subprocess_run(
+        self._run_command(
             f'npx cdk-assets publish --path {asset_artifacts.file}',
             env=environment_variables
         )
 
     def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
-        return cloud_assembly.get_stack_by_name(self._internal_stack_name).template
+        return cloud_assembly.get_stack_by_name(self.STACK_LOGICAL_ID).template
 
     def _run_command(self, command: str, env: Dict[str, str] = None):
         # We're assuming here that the cwd is the directory to run the command from. I'm not certain
         # that will always be correct...
-        result = subprocess.run(
+        result = self._subprocess_run(
             command,
             env=env,
             shell=True,
