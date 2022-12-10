@@ -7,8 +7,8 @@ from sceptre.connection_manager import ConnectionManager
 from sceptre.helpers import normalise_path
 from sceptre.template_handlers import TemplateHandler
 
-from template_handler.cdk_builder import CdkBuilder
-from template_handler.class_importer import ClassImporter
+from sceptre_cdk_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.class_importer import ClassImporter
 
 try:
     from typing import Protocol

@@ -9,7 +9,7 @@ from aws_cdk.cx_api import CloudAssembly
 from sceptre.connection_manager import ConnectionManager
 from sceptre.exceptions import SceptreException
 
-from template_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.cdk_builder import CdkBuilder
 
 
 class TestCdkBuilder(TestCase):

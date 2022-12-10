@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from sceptre.exceptions import SceptreException
 
-from template_handler.class_importer import ClassImporter
+from sceptre_cdk_handler.class_importer import ClassImporter
 
 
 class TestClassImporter(TestCase):

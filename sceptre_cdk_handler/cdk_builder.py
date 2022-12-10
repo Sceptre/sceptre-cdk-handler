@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Protocol, Any, Optional, Dict
+from typing import Protocol, Any, Optional, Dict, Type
 
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
@@ -70,7 +70,7 @@ class CdkBuilder:
         self._logger.info(f'Publishing CDK assets')
         self._logger.debug(f'Assets manifest file: {asset_artifacts.file}')
         self._run_command(
-            f'npx cdk-assets publish --path {asset_artifacts.file}',
+            f'npx cdk-assets -v publish --path {asset_artifacts.file}',
             env=environment_variables
         )
 
@@ -109,6 +109,7 @@ class CdkBuilder:
             The dictionary of environment variables.
         """
         envs = self._environment_variables.copy()
+        envs.pop("AWS_PROFILE", None)
         # Set aws environment variables specific to whatever AWS configuration has been set on the
         # stack's connection manager.
         credentials: Credentials = self._connection_manager._get_session(
@@ -119,6 +120,9 @@ class CdkBuilder:
         envs.update(
             AWS_ACCESS_KEY_ID=credentials.access_key,
             AWS_SECRET_ACCESS_KEY=credentials.secret_key,
+            AWS_DEFAULT_REGION=self._connection_manager.region,
+            CDK_DEFAULT_REGION=self._connection_manager.region,
+            AWS_REGION=self._connection_manager.region
         )
 
         # There might not be a session token, so if there isn't one, make sure it doesn't exist in

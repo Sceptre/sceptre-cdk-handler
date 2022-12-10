@@ -5,9 +5,9 @@ from unittest.mock import Mock, create_autospec
 import yaml
 from sceptre.connection_manager import ConnectionManager
 
-from template_handler.cdk import CDK, DEFAULT_CLASS_NAME
-from template_handler.cdk_builder import CdkBuilder
-from template_handler.class_importer import ClassImporter
+from sceptre_cdk_handler.cdk import CDK, DEFAULT_CLASS_NAME
+from sceptre_cdk_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.class_importer import ClassImporter
 
 
 class TestCDK(TestCase):
