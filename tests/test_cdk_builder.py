@@ -88,12 +88,15 @@ class TestCdkBuilder(TestCase):
     def test_build_template__no_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.credentials.token = None
         self.build()
-        expected_command = f'npx cdk-assets publish --path asset/file/path'
+        expected_command = f'npx cdk-assets -v publish --path asset/file/path'
         expected_envs = {
             **self.environment_variables,
             **{
                 "AWS_ACCESS_KEY_ID": self.credentials.access_key,
                 "AWS_SECRET_ACCESS_KEY": self.credentials.secret_key,
+                "AWS_DEFAULT_REGION": self.connection_manager.region,
+                "CDK_DEFAULT_REGION": self.connection_manager.region,
+                "AWS_REGION": self.connection_manager.region
             }
         }
         del expected_envs['AWS_SESSION_TOKEN']
@@ -105,16 +108,33 @@ class TestCdkBuilder(TestCase):
             check=True
         )
 
+    def test_build_template__aws_session_token_in_envs__does_not_publish_assets_with_profile_specified(self):
+        self.environment_variables['AWS_PROFILE'] = 'dont_use_me'
+        called = False
+
+        def fake_subprocess(*args, env, **kwargs):
+            nonlocal called
+            self.assertNotIn('AWS_PROFILE', env)
+            called = True
+
+        self.subprocess_run.side_effect = fake_subprocess
+
+        self.build()
+        self.assertTrue(called)
+
     def test_build_template__with_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.credentials.token = "special session token"
         self.build()
-        expected_command = f'npx cdk-assets publish --path asset/file/path'
+        expected_command = f'npx cdk-assets -v publish --path asset/file/path'
         expected_envs = {
             **self.environment_variables,
             **{
                 "AWS_ACCESS_KEY_ID": self.credentials.access_key,
                 "AWS_SECRET_ACCESS_KEY": self.credentials.secret_key,
-                "AWS_SESSION_TOKEN": self.credentials.token
+                "AWS_SESSION_TOKEN": self.credentials.token,
+                "AWS_DEFAULT_REGION": self.connection_manager.region,
+                "CDK_DEFAULT_REGION": self.connection_manager.region,
+                "AWS_REGION": self.connection_manager.region
             }
         }
         self.subprocess_run.assert_any_call(

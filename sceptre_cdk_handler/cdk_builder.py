@@ -120,8 +120,11 @@ class CdkBuilder:
         envs.update(
             AWS_ACCESS_KEY_ID=credentials.access_key,
             AWS_SECRET_ACCESS_KEY=credentials.secret_key,
+            # Most AWS SDKs use AWS_DEFAULT_REGION for the region
             AWS_DEFAULT_REGION=self._connection_manager.region,
+            # CDK frequently uses CDK_DEFAULT_REGION in its docs
             CDK_DEFAULT_REGION=self._connection_manager.region,
+            # cdk-assets requires AWS_REGION to determine what region's STS endpoint to use
             AWS_REGION=self._connection_manager.region
         )
 
