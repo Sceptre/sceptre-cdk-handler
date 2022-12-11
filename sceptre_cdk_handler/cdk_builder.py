@@ -73,14 +73,12 @@ class BootstrappedCdkBuilder(CdkBuilder):
         return app.synth()
 
     def _publish(self, cloud_assembly: CloudAssembly):
-        asset_artifacts = None
-        for artifacts in cloud_assembly.artifacts:
-            if isinstance(artifacts, aws_cdk.cx_api.AssetManifestArtifact):
-                asset_artifacts = artifacts
-                break
-
-        if asset_artifacts is None:
-            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+        asset_artifacts = self._get_assets_manifest(cloud_assembly)
+        if self._only_asset_is_template(asset_artifacts):
+            # Sceptre already has a mechanism to upload the template if configured. We don't
+            # need to deploy assets if the only asset is the template
+            self._logger.debug("Only asset is template; Skipping asset upload.")
+            return
 
         environment_variables = self._get_envs()
         self._logger.info(f'Publishing CDK assets')
@@ -89,6 +87,16 @@ class BootstrappedCdkBuilder(CdkBuilder):
             f'npx cdk-assets -v publish --path {asset_artifacts.file}',
             env=environment_variables
         )
+
+    def _get_assets_manifest(self, cloud_assembly):
+        asset_artifacts = None
+        for artifacts in cloud_assembly.artifacts:
+            if isinstance(artifacts, aws_cdk.cx_api.AssetManifestArtifact):
+                asset_artifacts = artifacts
+                break
+        if asset_artifacts is None:
+            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+        return asset_artifacts
 
     def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
         return cloud_assembly.get_stack_by_name(self.STACK_LOGICAL_ID).template
@@ -152,6 +160,15 @@ class BootstrappedCdkBuilder(CdkBuilder):
             envs['AWS_SESSION_TOKEN'] = credentials.token
 
         return envs
+
+    def _only_asset_is_template(self, asset_artifacts: aws_cdk.cx_api.AssetManifestArtifact):
+        manifest_contents = asset_artifacts.contents
+        if manifest_contents.docker_images:
+            return False
+
+        keys = list(manifest_contents.files.keys())
+        expected_template = f'{self.STACK_LOGICAL_ID}.template.json'
+        return keys == [expected_template]
 
 
 class BootstraplessCdkBuilder(BootstrappedCdkBuilder):

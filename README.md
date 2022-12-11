@@ -3,7 +3,7 @@
 ## What is this?
 
 `sceptre-cdk-handler` is a TemplateHandler for Sceptre (versions 2.7 and up) that lets you use a
-Python AWS CDK template as a stack's template.
+Python AWS CDK stack class as a stack's template.
 
 This template handler will use the AWS CDK to synthesize the CDK stack into a CloudFormation template
 and then run `npx cdk-assets` to publish any required assets to S3/ECR.

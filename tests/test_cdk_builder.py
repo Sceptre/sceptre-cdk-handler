@@ -43,9 +43,21 @@ class TestBootstrappedCdkBuilder(TestCase):
         self.app_class = create_autospec(aws_cdk.App)
         self.assembly = Mock(CloudAssembly)
         self.app_class.return_value.synth.return_value = self.assembly
+        self.manifest = Mock(**{
+            'spec': aws_cdk.cx_api.AssetManifestArtifact,
+            'file': "asset/file/path",
+            'contents.docker_images': {
+                "hashhashhash": {"blah": "blah"}
+            },
+            'contents.files': {
+                "hashyhashhash": {"blah": "blah"},
+                "CDKStack.template.json": {"blah": "blah"}
+            }
+        })
+
         self.assembly.artifacts = [
             Mock(name="irrelevant_artifact"),
-            Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
+            self.manifest
         ]
         self.environment_variables = {
             "PATH": "blah:blah:blah",
@@ -90,6 +102,12 @@ class TestBootstrappedCdkBuilder(TestCase):
         del self.assembly.artifacts[1]
         with self.assertRaises(SceptreException):
             self.build()
+
+    def test_build_template__synthesized_assembly_has_only_template_asset__does_not_publish_assets(self):
+        self.manifest.contents.docker_images.clear()
+        self.manifest.contents.files.pop('hashyhashhash')
+        self.build()
+        self.subprocess_run.assert_not_called()
 
     def test_build_template__no_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.credentials.token = None

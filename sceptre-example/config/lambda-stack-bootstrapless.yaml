@@ -6,14 +6,13 @@
 template:
     type: cdk
     # The path is always within your project's templates/ directory.
-    path: lambda_test.py
+    path: lambda_stack.py
     deployment_type: bootstrapless
     # bootstrapless_config are the snake_cased arguments passed to the cdk-bootstrapless-synthesizer
     # for definitions of possible parameters, see the API docs here:
     # https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md
     bootstrapless_config:
-        # file_asset_bucket_name is ALWAYS required, since CDK always wants to upload the template
-        # there at minimum. You can use !stack_attr to reference other stack attributes that happen
+        # You can use !stack_attr to reference other stack attributes that happen
         # to be set with resolvers to chain the resolver value.
         file_asset_bucket_name: !stack_attr template_bucket_name
         file_asset_prefix: {{template_key_prefix}}/cdk-assets

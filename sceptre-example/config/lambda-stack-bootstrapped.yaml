@@ -16,7 +16,7 @@
 template:
   type: cdk
   # The path is always within your project's templates/ directory.
-  path: lambda_test.py
+  path: lambda_stack.py
   deployment_type: bootstrapped
   # bootstrap_qualifier is optional, but it's better to be explicit about it, even if you do
   # want to use the "default" bootstrap stack in your account. Using !stack_output here ensures that
