@@ -15,6 +15,8 @@ In other words, by using this handler with Sceptre, _you skip ever using `cdk de
 By using this handler, you can now use CDK templates with all your favorite Sceptre commands, like
 `launch`, `validate`, `generate`, and `diff` (along with all the rest)!
 
+## Why would you want to use CDK with Sceptre? Aren't those two ways to do the same thing?
+
 ## How to install sceptre-cdk-handler
 
 1) Install the Sceptre CDK handler using `pip install sceptre-cdk-handler`
@@ -24,6 +26,47 @@ By using this handler, you can now use CDK templates with all your favorite Scep
 ## How to use sceptre-cdk-handler
 
 The template "type" for this handler is `cdk`. 
+
+### Deployment Types
+The CDK Handler supports two different deployment types, which function somewhat differently. These
+are "bootstrapped" and "bootstrapless", both passed to the `deployment_type` template handler argument
+
+#### The "bootstrapped" deployment_type
+The "bootstrapped" deployment type is a more typical CDK-like way to deploy infrastructure and 
+conforms more to the standard ways CDK operates. If your organization has a lot of CDK infrastructure,
+using this deployment_type likely will allow Sceptre to interoperate with existing patterns and 
+policies. 
+
+The `"bootstrapped"` deployment_type causes Sceptre assets (namely S3-destined files and 
+ECR-destined images) to be deployed using the usual CDK Bootstrapped machinery. Specifically, by 
+referencing a "qualifier", CDK looks for a corresponding stack in the AWS account that contains the
+specific S3 bucket and ECR repo, as well as IAM roles to be assumed in order build and push those
+assets up to the cloud.
+
+In order to use the "bootstrapped" deployment type to push assets to the cloud, a CDK bootstrap stack 
+with matching qualifier must already be deployed. It may be deployed via CDK (outside of Sceptre) or
+you can use CDK to generate the bootstrap template for Sceptre to deploy using  
+`cdk bootstrap --show-template > cdk-bootstrap.yaml`.
+
+With that said, a bootstrap stack is not actually necessary if your stack includes no S3 or ECR 
+assets to push.
+
+**Important:** See section below on IAM implications and behavior of using this handler.
+
+#### The "bootstrapless" deployment_type
+While the "bootstrapped" deployment_type is more similar to CDK's way of operating, it's less typical
+for Sceptre. Sceptre shines by allowing you to define infrastructure in different stacks and then
+"wire them together" using powerful (and very handy) hooks and resolvers. Thus, a more "Sceptre-like"
+way would be to avoid using the CDK bootstrap stack and just providing references to the required
+asset-related infrastructure with resolvers like `!stack_output`.
+
+The "bootstrapless" deployment_type uses the [cdk-bootstrapless-synthesizer](https://github.com/aws-samples/cdk-bootstrapless-synthesizer)
+to handle assets without needing a bootstrap stack. Instead, you can provide the relevant asset-related
+configurations as needed or desired, pulling values from other stack outputs using resolvers.
+
+If you don't need to utilize a pre-existing bootstrap stack or don't need or want the overhead of 
+having a bootstrap stack with all the infrastructure resources created along with that (many of which
+you might not actually need), the "bootstrapless" deployment_type is a simpler approach.
 
 ### Arguments:
 
