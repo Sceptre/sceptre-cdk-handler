@@ -8,9 +8,9 @@ from typing import Any, Optional, Dict, Type
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
 from botocore.credentials import Credentials
+from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer
 from sceptre import exceptions
 from sceptre.connection_manager import ConnectionManager
-from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer, BootstraplessStackSynthesizerProps
 from sceptre.exceptions import TemplateHandlerArgumentsInvalidError
 
 
