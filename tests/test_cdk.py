@@ -5,8 +5,8 @@ from unittest.mock import Mock, create_autospec
 import yaml
 from sceptre.connection_manager import ConnectionManager
 
-from sceptre_cdk_handler.cdk import CDK, DEFAULT_CLASS_NAME
-from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder
+from sceptre_cdk_handler.cdk import CDK, DEFAULT_CLASS_NAME, QUALIFIER_CONTEXT_KEY
+from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder, BootstraplessCdkBuilder
 from sceptre_cdk_handler.class_importer import ClassImporter
 
 
@@ -16,9 +16,7 @@ class TestCDK(TestCase):
         self.connection_manager = Mock(ConnectionManager)
         self.arguments = {
             'path': 'my/template/path.py',
-            'context': {
-                '@aws-cdk/core:bootstrapQualifier': 'hnb659fds'
-            }
+            'deployment_type': 'bootstrapped'
         }
         self.sceptre_user_data = {
             'key': 'value'
@@ -28,20 +26,25 @@ class TestCDK(TestCase):
         }
         self.importer_class = create_autospec(ClassImporter)
         self.template_dict = {'Resources': {}}
-        self.builder_class = create_autospec(BootstrappedCdkBuilder)
-        self.builder_class.return_value.build_template.return_value = self.template_dict
+        self.bootstrapped_builder_class = create_autospec(BootstrappedCdkBuilder)
+        self.bootstrapless_builder_class = create_autospec(BootstraplessCdkBuilder)
+        self.bootstrapped_builder_class.return_value.build_template.return_value = self.template_dict
+        self.bootstrapless_builder_class.return_value.build_template.return_value = self.template_dict
 
     @property
     def handler(self) -> CDK:
-        return CDK(
+        handler = CDK(
             self.name,
             self.arguments,
             self.sceptre_user_data,
             self.connection_manager,
             self.stack_group_config,
             importer_class=self.importer_class,
-            cdk_builder_class=self.builder_class
+            bootstrapped_cdk_builder_class=self.bootstrapped_builder_class,
+            bootstrapless_cdk_builder_class=self.bootstrapless_builder_class
         )
+        handler.validate()
+        return handler
 
     def test_handle__class_name_as_argument__imports_named_class_from_specified_template_path(self):
         self.arguments['class_name'] = "MyFancyClass"
@@ -70,11 +73,89 @@ class TestCDK(TestCase):
             DEFAULT_CLASS_NAME
         )
 
-    def test_handle__builds_template_for_imported_stack_with_context_and_sceptre_user_data(self):
+    def test_handle__bootstrapped__bootstrap_qualifier_set__no_context__builds_template_with_qualifier_in_context(self):
+        self.arguments['deployment_type'] = 'bootstrapped'
+        self.arguments['bootstrap_qualifier'] = qualifier = 'blardyblahr'
         self.handler.handle()
-        self.builder_class.return_value.build_template.assert_any_call(
+        self.bootstrapped_builder_class.assert_any_call(self.handler.logger, self.connection_manager)
+        expected_context = {
+            QUALIFIER_CONTEXT_KEY: qualifier
+        }
+        self.bootstrapped_builder_class.return_value.build_template.assert_any_call(
             self.importer_class.return_value.import_class.return_value,
-            self.arguments['context'],
+            expected_context,
+            self.sceptre_user_data
+        )
+
+    def test_handle__bootstrapped__bootstrap_qualifier_set__has_context__builds_template_with_qualifier_in_context(self):
+        self.arguments['deployment_type'] = 'bootstrapped'
+        self.arguments['bootstrap_qualifier'] = qualifier = 'blardyblahr'
+        self.arguments['context'] = context = {
+            'something': 'else'
+        }
+        expected_context = context.copy()
+        self.handler.handle()
+        self.bootstrapped_builder_class.assert_any_call(self.handler.logger, self.connection_manager)
+
+        expected_context[QUALIFIER_CONTEXT_KEY] = qualifier
+        self.bootstrapped_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            expected_context,
+            self.sceptre_user_data
+        )
+
+    def test_handle__bootstrapped__bootstrap_qualifier_in_context__builds_template_with_qualifier_in_context(self):
+        self.arguments['deployment_type'] = 'bootstrapped'
+        self.arguments['context'] = context = {
+            'something': 'else',
+            QUALIFIER_CONTEXT_KEY: 'blardyblahr'
+        }
+        expected_context = context.copy()
+        self.handler.handle()
+        self.bootstrapped_builder_class.assert_any_call(self.handler.logger, self.connection_manager)
+
+        self.bootstrapped_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            expected_context,
+            self.sceptre_user_data
+        )
+
+    def test_handle__bootstrapped__no_qualifier_or_context__builds_template_with_no_context(self):
+        self.arguments['deployment_type'] = 'bootstrapped'
+        self.handler.handle()
+        self.bootstrapped_builder_class.assert_any_call(self.handler.logger, self.connection_manager)
+        self.bootstrapped_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            None,
+            self.sceptre_user_data
+        )
+
+    def test_handle_bootstrapless__no_bootstrapless_config__builds_template_with_empty_bootstrapless_config(self):
+        self.arguments['deployment_type'] = 'bootstrapless'
+        self.arguments['context'] = context = {'something': 'else'}
+        self.handler.handle()
+        self.bootstrapless_builder_class.assert_any_call(self.handler.logger, self.connection_manager, {})
+        self.bootstrapless_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            context,
+            self.sceptre_user_data
+        )
+
+    def test_handle_bootstrapless__bootstrapless_config__builds_template_with_bootstrapless_config(self):
+        self.arguments['deployment_type'] = 'bootstrapless'
+        self.arguments['context'] = context = {'something': 'else'}
+        self.arguments['bootstrapless_config'] = config = {
+            'file_asset_bucket_name': 'my_bucket'
+        }
+        self.handler.handle()
+        self.bootstrapless_builder_class.assert_any_call(
+            self.handler.logger,
+            self.connection_manager,
+            config
+        )
+        self.bootstrapless_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            context,
             self.sceptre_user_data
         )
 

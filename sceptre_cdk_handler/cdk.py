@@ -56,6 +56,7 @@ class CDK(TemplateHandler):
         """
         return {
             "type": "object",
+            "additionalProperties": False,
             "properties": {
                 "path": {"type": "string"},
                 "deployment_type": {
@@ -67,6 +68,7 @@ class CDK(TemplateHandler):
                 "class_name": {"type": "string"},
                 "bootstrapless_config": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "file_asset_bucket_name": {"type": "string"},
                         "file_asset_prefix": {"type": "string"},
@@ -160,6 +162,7 @@ class CDK(TemplateHandler):
             builder = self._get_bootstrapless_builder()
             context = self.cdk_context
         else:
+            # It shouldn't be possible to get here due to the json schema validation
             raise ValueError("deployment_type must be 'bootstrapped' or 'bootstrapless'")
 
         template_dict = builder.build_template(
@@ -180,7 +183,7 @@ class CDK(TemplateHandler):
         # is, if one exists; We'll make one if it doesn't.
         if self.bootstrap_qualifier:
             context = self.cdk_context or {}
-            context[QUALIFIER_CONTEXT_KEY] = self.cdk_context
+            context[QUALIFIER_CONTEXT_KEY] = self.bootstrap_qualifier
             return context, builder
         # If there's no qualifier specified anywhere, we're falling back to CDK's default
         # context-retrieval mechanisms.
@@ -193,5 +196,3 @@ class CDK(TemplateHandler):
             self.bootstrapless_config
         )
 
-    def validate(self):
-        super().validate()
