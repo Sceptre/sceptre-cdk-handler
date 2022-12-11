@@ -81,6 +81,9 @@ class CDK(TemplateHandler):
                         "image_asset_tag_prefix": {"type": "string"},
                         "template_bucket_name": {"type": "string"}
                     },
+                    "required": [
+                        "file_asset_bucket_name"
+                    ]
                 }
             },
             "required": [
