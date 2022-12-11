@@ -6,7 +6,7 @@ import yaml
 from sceptre.connection_manager import ConnectionManager
 
 from sceptre_cdk_handler.cdk import CDK, DEFAULT_CLASS_NAME
-from sceptre_cdk_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder
 from sceptre_cdk_handler.class_importer import ClassImporter
 
 
@@ -28,7 +28,7 @@ class TestCDK(TestCase):
         }
         self.importer_class = create_autospec(ClassImporter)
         self.template_dict = {'Resources': {}}
-        self.builder_class = create_autospec(CdkBuilder)
+        self.builder_class = create_autospec(BootstrappedCdkBuilder)
         self.builder_class.return_value.build_template.return_value = self.template_dict
 
     @property

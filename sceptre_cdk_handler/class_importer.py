@@ -5,9 +5,11 @@ from typing import Type
 
 from sceptre import exceptions
 
+from sceptre_cdk_handler.cdk_builder import SceptreCdkStack
+
 
 class ClassImporter:
-    def import_class(self, template_path: Path, class_name: str) -> Type:
+    def import_class(self, template_path: Path, class_name: str) -> Type[SceptreCdkStack]:
         """
         Import the CDK Python template module.
 

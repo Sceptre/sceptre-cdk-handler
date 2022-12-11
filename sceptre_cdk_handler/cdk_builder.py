@@ -2,20 +2,35 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Protocol, Any, Optional, Dict, Type
+from abc import ABC, abstractmethod
+from typing import Any, Optional, Dict, Type
 
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
 from botocore.credentials import Credentials
 from sceptre import exceptions
 from sceptre.connection_manager import ConnectionManager
+from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer, BootstraplessStackSynthesizerProps
+from sceptre.exceptions import TemplateHandlerArgumentsInvalidError
 
 
-class SceptreCdkStackConstructor(Protocol):
-    def __call__(self, scope: aws_cdk.App, id: str, sceptre_user_data: Any) -> aws_cdk.Stack: ...
+class SceptreCdkStack(aws_cdk.Stack):
+    def __init__(self, scope: aws_cdk.App, id: str, sceptre_user_data: Any, **kwargs):
+        super().__init__(scope, id, **kwargs)
+        self.sceptre_user_data = sceptre_user_data
 
 
-class CdkBuilder:
+class CdkBuilder(ABC):
+    @abstractmethod
+    def build_template(
+        self,
+        stack_class: Type[SceptreCdkStack],
+        cdk_context: Optional[dict],
+        sceptre_user_data: Any
+    ) -> dict: ...
+
+
+class BootstrappedCdkBuilder(CdkBuilder):
     STACK_LOGICAL_ID = 'CDKStack'
 
     def __init__(
@@ -35,7 +50,7 @@ class CdkBuilder:
 
     def build_template(
         self,
-        stack_class: SceptreCdkStackConstructor,
+        stack_class: Type[SceptreCdkStack],
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> dict:
@@ -46,7 +61,7 @@ class CdkBuilder:
 
     def _synthesize(
         self,
-        stack_class: SceptreCdkStackConstructor,
+        stack_class: Type[SceptreCdkStack],
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> CloudAssembly:
@@ -136,3 +151,44 @@ class CdkBuilder:
             envs['AWS_SESSION_TOKEN'] = credentials.token
 
         return envs
+
+
+class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
+    def __init__(
+        self,
+        logger: logging.Logger,
+        connection_manager: ConnectionManager,
+        deployment_config: dict,
+        *,
+        subprocess_run=subprocess.run,
+        app_class=aws_cdk.App,
+        environment_variables=os.environ
+    ):
+        super().__init__(
+            logger,
+            connection_manager,
+            subprocess_run=subprocess_run,
+            app_class=app_class,
+            environment_variables=environment_variables
+        )
+        self.deployment_config = deployment_config
+
+    def _synthesize(
+        self,
+        stack_class: Type[SceptreCdkStack],
+        cdk_context: Optional[dict],
+        sceptre_user_data: Any
+    ) -> CloudAssembly:
+        self._logger.debug(f'CDK synthesing CdkStack Class')
+        self._logger.debug(f'CDK Context: {cdk_context}')
+        app = self._app_class(context=cdk_context)
+        try:
+            synthesizer = BootstraplessStackSynthesizer(**self.deployment_config)
+        except TypeError as e:
+            raise TemplateHandlerArgumentsInvalidError(
+                "Error encountered attempting to instantiate the BootstraplessSynthesizer with the "
+                f"specified deployment config: {e}"
+            ) from e
+
+        stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data, synthesizer=synthesizer)
+        return app.synth()

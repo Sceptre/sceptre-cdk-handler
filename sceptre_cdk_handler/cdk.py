@@ -1,21 +1,22 @@
 import pathlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Tuple, Type
 
 import yaml
 from sceptre.connection_manager import ConnectionManager
 from sceptre.helpers import normalise_path
 from sceptre.template_handlers import TemplateHandler
 
-from sceptre_cdk_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder, BootstraplessCdkBuilder, SceptreCdkStack
 from sceptre_cdk_handler.class_importer import ClassImporter
 
 try:
-    from typing import Protocol
+    from typing import Literal
 except ImportError:
-    from typing_extensions import Protocol
+    from typing_extensions import Literal
 
 DEFAULT_CLASS_NAME = 'CdkStack'
+QUALIFIER_CONTEXT_KEY = '@aws-cdk/core:bootstrapQualifier'
 
 
 class CDK(TemplateHandler):
@@ -33,7 +34,8 @@ class CDK(TemplateHandler):
         stack_group_config: dict = None,
         *,
         importer_class=ClassImporter,
-        cdk_builder_class=CdkBuilder
+        bootstrapped_cdk_builder_class=BootstrappedCdkBuilder,
+        bootstrapless_cdk_builder_class=BootstraplessCdkBuilder
     ):
         super().__init__(
             name=name,
@@ -43,7 +45,8 @@ class CDK(TemplateHandler):
             stack_group_config=stack_group_config
         )
         self._importer = importer_class()
-        self._cdk_buidler = cdk_builder_class(self.logger, self.connection_manager)
+        self._bootstrapped_cdk_builder_class = bootstrapped_cdk_builder_class
+        self._bootstrapless_cdk_builder_class = bootstrapless_cdk_builder_class
 
     def schema(self):
         """
@@ -55,11 +58,32 @@ class CDK(TemplateHandler):
             "type": "object",
             "properties": {
                 "path": {"type": "string"},
+                "deployment_type": {
+                    "type": "string",
+                    "enum": ["bootstrapped", "bootstrapless"]
+                },
+                "bootstrap_qualifier": {"type": "string"},
                 "context": {"type": "object"},
-                "class_name": {"type": "string"}
+                "class_name": {"type": "string"},
+                "bootstrapless_config": {
+                    "type": "object",
+                    "properties": {
+                        "file_asset_bucket_name": {"type": "string"},
+                        "file_asset_prefix": {"type": "string"},
+                        "file_asset_publishing_role_arn": {"type": "string"},
+                        "file_asset_region_set": {"type": "string"},
+                        "image_asset_account_id": {"type": "string"},
+                        "image_asset_publishing_role_arn": {"type": "string"},
+                        "image_asset_region_set": {"type": "string"},
+                        "image_asset_repository_name": {"type": "string"},
+                        "image_asset_tag_prefix": {"type": "string"},
+                        "template_bucket_name": {"type": "string"}
+                    },
+                }
             },
             "required": [
-                "path"
+                "path",
+                'deployment_type'
             ]
         }
 
@@ -73,6 +97,20 @@ class CDK(TemplateHandler):
         """
 
         return self._resolve_template_path(self.arguments['path'])
+
+    def _resolve_template_path(self, template_path):
+        """
+        Return the project_path joined to template_path as
+        a string.
+
+        Note that os.path.join defers to an absolute path
+        if the input is absolute.
+        """
+        return pathlib.Path(
+            self.stack_group_config["project_path"],
+            "templates",
+            normalise_path(template_path)
+        )
 
     @property
     def cdk_context(self) -> dict:
@@ -96,6 +134,18 @@ class CDK(TemplateHandler):
 
         return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
 
+    @property
+    def bootstrap_qualifier(self) -> Optional[str]:
+        return self.arguments.get('bootstrap_qualifier')
+
+    @property
+    def deployment_type(self) -> Literal['bootstrap', 'bootstrapless']:
+        return self.arguments['deployment_type']
+
+    @property
+    def bootstrapless_config(self) -> dict:
+        return self.arguments.get('bootstrapless_config', {})
+
     def handle(self) -> str:
         """
         Main Sceptre CDK Handler function
@@ -103,24 +153,45 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
-        stack_class = self._importer.import_class(self.cdk_template_path, self.cdk_class_name)
-        template_dict = self._cdk_buidler.build_template(
+        stack_class: Type[SceptreCdkStack] = self._importer.import_class(self.cdk_template_path, self.cdk_class_name)
+        if self.deployment_type == 'bootstrapped':
+            context, builder = self._get_bootstrapped_builder()
+        elif self.deployment_type == "bootstrapless":
+            builder = self._get_bootstrapless_builder()
+            context = self.cdk_context
+        else:
+            raise ValueError("deployment_type must be 'bootstrapped' or 'bootstrapless'")
+
+        template_dict = builder.build_template(
             stack_class,
-            self.cdk_context,
+            context,
             self.sceptre_user_data
         )
         return yaml.safe_dump(template_dict)
 
-    def _resolve_template_path(self, template_path):
-        """
-        Return the project_path joined to template_path as
-        a string.
+    def _get_bootstrapped_builder(self) -> Tuple[Optional[dict], BootstrappedCdkBuilder]:
+        builder = self._bootstrapped_cdk_builder_class(self.logger, self.connection_manager)
+        # The qualifier might already be in the context, in which case we don't need to do
+        # anything
+        if self.cdk_context and QUALIFIER_CONTEXT_KEY in self.cdk_context:
+            return self.cdk_context, builder
+        # As a convenience, the qualifier can be set as its own argument to simplify the
+        # configuration. If it's passed this way, we need to add it to whatever context dict there
+        # is, if one exists; We'll make one if it doesn't.
+        if self.bootstrap_qualifier:
+            context = self.cdk_context or {}
+            context[QUALIFIER_CONTEXT_KEY] = self.cdk_context
+            return context, builder
+        # If there's no qualifier specified anywhere, we're falling back to CDK's default
+        # context-retrieval mechanisms.
+        return None, builder
 
-        Note that os.path.join defers to an absolute path
-        if the input is absolute.
-        """
-        return pathlib.Path(
-            self.stack_group_config["project_path"],
-            "templates",
-            normalise_path(template_path)
+    def _get_bootstrapless_builder(self) -> BootstraplessCdkBuilder:
+        return self._bootstrapless_cdk_builder_class(
+            self.logger,
+            self.connection_manager,
+            self.bootstrapless_config
         )
+
+    def validate(self):
+        super().validate()

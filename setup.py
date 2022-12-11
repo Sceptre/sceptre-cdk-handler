@@ -26,7 +26,8 @@ with open("README.md") as readme_file:
 
 install_requirements = [
     "sceptre>=2.7",
-    "aws_cdk-lib>=2.0",
+    "aws_cdk-lib>=2.0,<3.0",
+    "cdk-bootstrapless-synthesizer>=2.0,<3.0",
     "typing-extensions"
 ]
 

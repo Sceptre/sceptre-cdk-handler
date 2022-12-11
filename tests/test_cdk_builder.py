@@ -9,7 +9,7 @@ from aws_cdk.cx_api import CloudAssembly
 from sceptre.connection_manager import ConnectionManager
 from sceptre.exceptions import SceptreException
 
-from sceptre_cdk_handler.cdk_builder import CdkBuilder
+from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder
 
 
 class TestCdkBuilder(TestCase):
@@ -48,7 +48,7 @@ class TestCdkBuilder(TestCase):
             "AWS_SESSION_TOKEN": "old token"
         }
 
-        self.builder = CdkBuilder(
+        self.builder = BootstrappedCdkBuilder(
             self.logger,
             self.connection_manager,
             subprocess_run=self.subprocess_run,
@@ -76,7 +76,7 @@ class TestCdkBuilder(TestCase):
 
         self.stack_class.assert_any_call(
             self.app_class.return_value,
-            CdkBuilder.STACK_LOGICAL_ID,
+            BootstrappedCdkBuilder.STACK_LOGICAL_ID,
             self.sceptre_user_data
         )
 
@@ -149,7 +149,7 @@ class TestCdkBuilder(TestCase):
         expected_template = {'Resources': {}}
 
         def get_stack_by_name(stack_id):
-            self.assertEqual(CdkBuilder.STACK_LOGICAL_ID, stack_id)
+            self.assertEqual(BootstrappedCdkBuilder.STACK_LOGICAL_ID, stack_id)
             return Mock(template=expected_template)
 
         self.assembly.get_stack_by_name = get_stack_by_name
