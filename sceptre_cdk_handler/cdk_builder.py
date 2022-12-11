@@ -21,6 +21,8 @@ class SceptreCdkStack(aws_cdk.Stack):
 
 
 class CdkBuilder(ABC):
+    STACK_LOGICAL_ID = 'CDKStack'
+
     @abstractmethod
     def build_template(
         self,
@@ -31,7 +33,6 @@ class CdkBuilder(ABC):
 
 
 class BootstrappedCdkBuilder(CdkBuilder):
-    STACK_LOGICAL_ID = 'CDKStack'
 
     def __init__(
         self,
@@ -158,11 +159,12 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
         self,
         logger: logging.Logger,
         connection_manager: ConnectionManager,
-        deployment_config: dict,
+        synthesizer_config: dict,
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        environment_variables=os.environ
+        environment_variables=os.environ,
+        synthesizer_class=BootstraplessStackSynthesizer
     ):
         super().__init__(
             logger,
@@ -171,7 +173,8 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
             app_class=app_class,
             environment_variables=environment_variables
         )
-        self.deployment_config = deployment_config
+        self._synthesizer_config = synthesizer_config
+        self._synthesizer_class = synthesizer_class
 
     def _synthesize(
         self,
@@ -183,7 +186,7 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         try:
-            synthesizer = BootstraplessStackSynthesizer(**self.deployment_config)
+            synthesizer = self._synthesizer_class(**self._synthesizer_config)
         except TypeError as e:
             raise TemplateHandlerArgumentsInvalidError(
                 "Error encountered attempting to instantiate the BootstraplessSynthesizer with the "

@@ -6,13 +6,19 @@ from unittest.mock import Mock, create_autospec
 
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
+from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer
 from sceptre.connection_manager import ConnectionManager
-from sceptre.exceptions import SceptreException
+from sceptre.exceptions import SceptreException, TemplateHandlerArgumentsInvalidError
 
-from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder
+from sceptre_cdk_handler.cdk_builder import (
+    BootstrappedCdkBuilder,
+    BootstraplessCdkBuilder,
+    SceptreCdkStack,
+    CdkBuilder
+)
 
 
-class TestCdkBuilder(TestCase):
+class TestBootstrappedCdkBuilder(TestCase):
     def setUp(self):
         self.logger = Mock(logging.Logger)
         self.profile = 'my_fancy_profile'
@@ -56,7 +62,7 @@ class TestCdkBuilder(TestCase):
             environment_variables=self.environment_variables
         )
 
-        self.stack_class = Mock()
+        self.stack_class = create_autospec(SceptreCdkStack)
         self.context = {'hello': 'you'}
         self.sceptre_user_data = {'user': 'data'}
 
@@ -76,7 +82,7 @@ class TestCdkBuilder(TestCase):
 
         self.stack_class.assert_any_call(
             self.app_class.return_value,
-            BootstrappedCdkBuilder.STACK_LOGICAL_ID,
+            CdkBuilder.STACK_LOGICAL_ID,
             self.sceptre_user_data
         )
 
@@ -149,10 +155,87 @@ class TestCdkBuilder(TestCase):
         expected_template = {'Resources': {}}
 
         def get_stack_by_name(stack_id):
-            self.assertEqual(BootstrappedCdkBuilder.STACK_LOGICAL_ID, stack_id)
+            self.assertEqual(CdkBuilder.STACK_LOGICAL_ID, stack_id)
             return Mock(template=expected_template)
 
         self.assembly.get_stack_by_name = get_stack_by_name
 
         result = self.build()
         self.assertEqual(expected_template, result)
+
+
+class TestBootstraplessCdkBuilder(TestCase):
+    def setUp(self):
+        self.logger = Mock(logging.Logger)
+        self.profile = 'my_fancy_profile'
+        self.region = 'us-west-2'
+        self.iam_role = 'arn:aws:something:or:another:role'
+        self.credentials = Mock(
+            access_key="key",
+            secret_key="secret",
+            token=None
+        )
+
+        self.connection_manager = Mock(
+            ConnectionManager,
+            **{
+                'profile': self.profile,
+                'region': self.region,
+                'iam_role': self.iam_role,
+                '_get_session.return_value.get_credentials.return_value': self.credentials
+            }
+        )
+        self.subprocess_run = create_autospec(subprocess.run)
+        self.app_class = create_autospec(aws_cdk.App)
+        self.assembly = Mock(CloudAssembly)
+        self.app_class.return_value.synth.return_value = self.assembly
+        self.assembly.artifacts = [
+            Mock(name="irrelevant_artifact"),
+            Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
+        ]
+        self.environment_variables = {
+            "PATH": "blah:blah:blah",
+            "AWS_ACCESS_KEY_ID": "old key",
+            "AWS_SECRET_ACCESS_KEY": "old secret",
+            "AWS_SESSION_TOKEN": "old token"
+        }
+        self.synthesizer_config = {
+            'file_asset_bucket_name': 'my_bucket'
+        }
+        self.synthesizer_class = create_autospec(BootstraplessStackSynthesizer)
+        self.builder = BootstraplessCdkBuilder(
+            self.logger,
+            self.connection_manager,
+            self.synthesizer_config,
+            subprocess_run=self.subprocess_run,
+            app_class=self.app_class,
+            environment_variables=self.environment_variables,
+            synthesizer_class=self.synthesizer_class
+        )
+
+        self.stack_class = create_autospec(SceptreCdkStack)
+        self.context = {'hello': 'you'}
+        self.sceptre_user_data = {'user': 'data'}
+
+    def test_build_template__no_synthesizer_config__instantiates_synthesizer_with_no_kwargs(self):
+        self.synthesizer_config.clear()
+        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+        self.synthesizer_class.assert_any_call(**self.synthesizer_config)
+
+    def test_build_template__instantiates_synthesizer_with_synthesizer_config_kwargs(self):
+        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+        self.synthesizer_class.assert_any_call(**self.synthesizer_config)
+
+    def test_build_template__invalid_synthesizer_arguments__raises_template_handler_arguments_invalid_error(self):
+        self.synthesizer_config['bad'] = 'not-recognized'
+        with self.assertRaises(TemplateHandlerArgumentsInvalidError):
+            self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+
+    def test_build_template__instantiates_stack_with_synthesizer(self):
+        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+        self.stack_class.assert_any_call(
+            self.app_class.return_value,
+            CdkBuilder.STACK_LOGICAL_ID,
+            self.sceptre_user_data,
+            synthesizer=self.synthesizer_class.return_value
+        )
