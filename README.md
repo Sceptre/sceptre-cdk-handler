@@ -165,8 +165,8 @@ sceptre_user_data:
 
 ### Arguments:
 
-* `path` (string, required): The path to the CDK template, relative to the `templates/` directory of
-  your project.
+* `path` (string, required): The path to the CDK template file, relative to the `templates/` directory of
+  your project. This should be a python file with your stack class, subclassing `SceptreCdkStack`.
 * `deployment_type` (string, required): This determines the way CDK assets should be pushed to the
   cloud. Options are `"bootstrapless"` and `"bootstrapped"`. See section above on "How to use" for
   more details.
@@ -174,7 +174,7 @@ sceptre_user_data:
   deployment type. This qualifier refers to the qualifier on a given CDK bootstrap stack in your 
   AWS account, whether deployed via CDK externally or within the same Sceptre project. If you use
   the `bootstrapped` deployment_type and do NOT specify a qualifier, CDK will default to the default
-  qualifier and look to use that in your account.  
+  qualifier and look to use that in your account.
 * `class_name` (string, optional): The name of the class on your CDK template to synthesize. 
   Defaults to `CdkStack`.
 * `context` (dict, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html) 
