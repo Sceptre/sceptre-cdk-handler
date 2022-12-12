@@ -91,16 +91,11 @@ class CDK(TemplateHandler):
 
     @property
     def cdk_template_path(self) -> Path:
-        """
-        CDK Template Path property handler.
-
-        Returns:
-            The specified CDK template path.
-        """
+        """CDK Template file path, relative to the the project's templates directory"""
 
         return self._resolve_template_path(self.arguments['path'])
 
-    def _resolve_template_path(self, template_path):
+    def _resolve_template_path(self, template_path: str) -> Path:
         """
         Return the project_path joined to template_path as
         a string.
@@ -116,36 +111,33 @@ class CDK(TemplateHandler):
 
     @property
     def cdk_context(self) -> dict:
-        """
-        CDK Context property handler.
-
-        Returns:
-            The specified CDK context.
-        """
+        """The CDK context dict to pass to the app. Used to pass feature flags, etc..."""
 
         return self.arguments.get('context')
 
     @property
     def cdk_class_name(self) -> str:
-        """
-        CDK Class Name property handler.
-
-        Returns:
-            The specified CDK class name.
-        """
+        """The name of the CDK Stack class on the template file to import."""
 
         return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
 
     @property
     def bootstrap_qualifier(self) -> Optional[str]:
+        """The bootstrap stack qualifier to use for the "bootstrapped" deployment_type."""
         return self.arguments.get('bootstrap_qualifier')
 
     @property
-    def deployment_type(self) -> Literal['bootstrap', 'bootstrapless']:
+    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless']:
+        """The way Sceptre should handle the deployment of file and image assets. Can be one of
+        "bootstrapped" or "bootstrapless".
+        """
         return self.arguments['deployment_type']
 
     @property
     def bootstrapless_config(self) -> dict:
+        """The synthesizer args for CDK Bootstrapless Synthesizer. Used only with the "bootstrapless"
+        deployment_type.
+        """
         return self.arguments.get('bootstrapless_config', {})
 
     def handle(self) -> str:
