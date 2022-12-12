@@ -60,3 +60,14 @@ parameters:
 # sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
 sceptre_user_data:
     special_variable: "use this directly at compile_time"
+
+# If you want to use the bootstrapped deployment action role, you'll need to set that as the iam_role
+# But be careful if you do, since by default, the DeploymentActionRole doesn't actually have the
+# right permissions to deploy most things. Setting the iam_role means you'll assume the deployment
+# role to execute the cloudformation actions
+# iam_role: !stack_output cdk-bootstrap.yaml::DeployRoleArn
+
+# To work the way CDK bootstrap generally operates will mean you need to assign the cloudformation
+# execution role to the stack from the bootstrap stack. This will be assumed by CloudFormation to
+# actually deploy the infrastructure, permanently binding this role to the stack.
+#role_arn: !stack_output cdk-bootstrap.yaml::CloudformationExecutionRoleArn

@@ -596,3 +596,7 @@ Outputs:
   # This output was added to support using !stack_output
   Qualifier:
     Value: !Ref Qualifier
+  DeployRoleArn:
+    Value: !GetAtt DeploymentActionRole.Arn
+  CloudformationExecutionRoleArn:
+    Value: !GetAtt CloudFormationExecutionRole.Arn
