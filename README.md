@@ -42,7 +42,7 @@ a string.
 
 _So why use CDK and Sceptre together?_ Because CDK provides excellent template generation capabilities
 and Sceptre will gladly use those. Furthermore, Sceptre has the ability to easily wire together an
-entire environment _regardless of how that environment's CloudFormation templates are Generated._ Thus,
+entire environment _regardless of how that environment's CloudFormation templates are generated._ Thus,
 Sceptre will happily (and fairly intuitively) deploy (and "wire together") stacks developed in vanilla
 CloudFormation YAML/JSON, templates augmented with Jinja2, Troposphere-generated templates, 
 AWS SAM templates, and CDK constructs. They can be deployed as a coherent environment that 
