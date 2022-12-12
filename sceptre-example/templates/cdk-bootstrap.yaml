@@ -1,5 +1,5 @@
 # This bootstrap template was 99.9% just what was output by `cdk bootstrap --show-template > cdk-bootstrap.yaml`
-# except the "Qualifier" output was added at the end to simplfiy stack configurations. If you already
+# except the added outputs at the end to simplfiy stack configurations. If you already
 # have a bootstrap stack in place in your environment, you can use that too. Having a bootstrap
 # stack in place (deployed via Sceptre or CDK) is required in order to support the "bootstrapped"
 # deployment_type for this handler.
@@ -593,7 +593,7 @@ Outputs:
       Fn::GetAtt:
         - CdkBootstrapVersion
         - Value
-  # This output was added to support using !stack_output
+  # These outputs were added to make integration with Sceptre more straight-forward
   Qualifier:
     Value: !Ref Qualifier
   DeployRoleArn:
