@@ -1,0 +1,11 @@
+profile: cnc
+project_code: cdk-handler-test
+region: us-west-2
+template_bucket_name: !stack_output assets-bucket.yaml::BucketName
+template_key_prefix: "templates"
+# If you use an iam_role, it will be the default role used to deploy when using the bootstrapless
+# deployment_type (unless a different role is specified in the bootstrapless_config). If using the
+# "bootstrapped" deployment_type with an iam_role, that role will first be assumed and then CDK will
+# assume the bootstrapped roles for pushing image assets. The iam_role will always be used for
+# actually deploying the synthesized stack templates, however.
+iam_role: "arn:aws:iam::12345643232:role/my-deployment-role"

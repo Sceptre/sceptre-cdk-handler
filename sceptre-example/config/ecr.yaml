@@ -1,0 +1,5 @@
+# This is the StackConfig for the ECR repo to push image assets to. You don't need this if you're
+# using the "bootstrapped" deployment_type on the cdk handler. You also don't need it when using the
+# "bootstrapless" deployment_type if you aren't building any CDK resources that produce ECR image assets.
+template:
+  path: ecr.yaml
