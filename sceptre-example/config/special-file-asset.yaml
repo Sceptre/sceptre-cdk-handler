@@ -1,0 +1,7 @@
+template:
+  type: cdk
+  path: ../cdk-app/cdk.json
+  deployment_type: bootstrapped
+  bootstrap_qualifier: !stack_output cdk-bootstrap.yaml::Qualifier
+  stack_logical_id: CdkAppStack
+
