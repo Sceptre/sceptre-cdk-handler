@@ -1,8 +1,11 @@
+import json
 import logging
 import os
 import subprocess
 import sys
 from abc import ABC, abstractmethod
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Optional, Dict, Type
 
 import aws_cdk
@@ -212,3 +215,132 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
 
         stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data, synthesizer=synthesizer)
         return app.synth()
+
+
+class NonPythonCdkBuilder:
+    def __init__(
+        self,
+        logger: logging.Logger,
+        connection_manager: ConnectionManager,
+        *,
+        subprocess_run=subprocess.run,
+        environment_variables=os.environ
+    ):
+        self._logger = logger
+        self._connection_manager = connection_manager
+        self._subprocess_run = subprocess_run
+        self._environment_variables = environment_variables
+
+    def build_template(self, cdk_json_path: Path, cdk_context: dict, stack_logical_id: str):
+        with TemporaryDirectory() as output_dir:
+            self._synthesize(cdk_json_path, output_dir, cdk_context, stack_logical_id)
+            assets_file = Path(output_dir, f'{stack_logical_id}.assets.json')
+            self._publish(assets_file, stack_logical_id)
+            template_file = Path(output_dir, f'{stack_logical_id}.template.json')
+            template = self._get_template(template_file)
+            return template
+
+    def _synthesize(self, cdk_json_path: Path, output_dir, cdk_context, stack_logical_id):
+        envs = self._get_envs()
+        command = self._create_command(output_dir, cdk_context, stack_logical_id)
+        self._subprocess_run(
+            command,
+            shell=True,
+            check=True,
+            env=envs,
+            stdout=sys.stderr,
+            cwd=str(cdk_json_path.parent.resolve())
+        )
+
+    def _get_envs(self) -> Dict[str, str]:
+        """
+        Obtains the environment variables to pass to the subprocess.
+
+        Sceptre can assume roles, profiles, etc... to connect to AWS for a given stack. This is
+        very useful. However, we need that SAME connection information to carry over to CDK when we
+        invoke it. The most precise way to do this is to use the same session credentials being used
+        by Sceptre for other stack operations. This method obtains those credentials and sets them
+        as environment variables that are passed to the subprocess and will, in turn, be used by
+        SAM CLI.
+
+        The environment variables dict created by this method will inherit all existing
+        environment variables in the current environment, but the AWS connection environment
+        variables will be overridden by the ones for this stack.
+
+        Returns:
+            The dictionary of environment variables.
+        """
+        envs = self._environment_variables.copy()
+        envs.pop("AWS_PROFILE", None)
+        # Set aws environment variables specific to whatever AWS configuration has been set on the
+        # stack's connection manager.
+        credentials: Credentials = self._connection_manager._get_session(
+            self._connection_manager.profile,
+            self._connection_manager.region,
+            self._connection_manager.iam_role
+        ).get_credentials()
+        envs.update(
+            AWS_ACCESS_KEY_ID=credentials.access_key,
+            AWS_SECRET_ACCESS_KEY=credentials.secret_key,
+            # Most AWS SDKs use AWS_DEFAULT_REGION for the region
+            AWS_DEFAULT_REGION=self._connection_manager.region,
+            # CDK frequently uses CDK_DEFAULT_REGION in its docs
+            CDK_DEFAULT_REGION=self._connection_manager.region,
+            # cdk-assets requires AWS_REGION to determine what region's STS endpoint to use
+            AWS_REGION=self._connection_manager.region
+        )
+
+        # There might not be a session token, so if there isn't one, make sure it doesn't exist in
+        # the envs being passed to the subprocess
+        if credentials.token is None:
+            envs.pop('AWS_SESSION_TOKEN', None)
+        else:
+            envs['AWS_SESSION_TOKEN'] = credentials.token
+
+        return envs
+
+    def _create_command(self, output_dir: str, cdk_context: Dict[str, str], stack_logical_id):
+        command = f'npx cdk synth {stack_logical_id} -o {output_dir} '
+        for key, value in cdk_context.items():
+            command += f'{key}={value} '
+
+        return command
+
+    def _publish(self, assets_filepath: Path, stack_logical_id: str):
+        assets_manifest = self._get_assets_manifest(assets_filepath)
+        if self._only_asset_is_template(assets_manifest, stack_logical_id):
+            # Sceptre already has a mechanism to upload the template if configured. We don't
+            # need to deploy assets if the only asset is the template
+            self._logger.debug("Only asset is template; Skipping asset upload.")
+            return
+
+        environment_variables = self._get_envs()
+        self._logger.info(f'Publishing CDK assets')
+        self._logger.debug(f'Assets manifest file: {assets_filepath}')
+        self._subprocess_run(
+            f'npx cdk-assets -v publish --path {assets_filepath}',
+            shell=True,
+            check=True,
+            env=environment_variables,
+            stdout=sys.stderr,
+        )
+
+    def _get_assets_manifest(self, assets_filepath: Path):
+        if not assets_filepath.exists():
+            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+
+        with assets_filepath.open(mode='r') as f:
+            assets_dict = json.load(f)
+        return assets_dict
+
+    def _only_asset_is_template(self, assets_dict: dict, stack_logical_id: str) -> bool:
+        if assets_dict.get('dockerImages', {}):
+            return False
+
+        keys = list(assets_dict.get('files', {}).keys())
+        expected_template = f'{stack_logical_id}.template.json'
+        return keys == [expected_template]
+
+    def _get_template(self, template_path: Path):
+        with template_path.open(mode='r') as f:
+            return json.load(f)

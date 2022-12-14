@@ -7,7 +7,12 @@ from sceptre.connection_manager import ConnectionManager
 from sceptre.helpers import normalise_path
 from sceptre.template_handlers import TemplateHandler
 
-from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder, BootstraplessCdkBuilder, SceptreCdkStack
+from sceptre_cdk_handler.cdk_builder import (
+    BootstrappedCdkBuilder,
+    BootstraplessCdkBuilder,
+    SceptreCdkStack,
+    NonPythonCdkBuilder
+)
 from sceptre_cdk_handler.class_importer import ClassImporter
 
 try:
@@ -66,6 +71,7 @@ class CDK(TemplateHandler):
                 "bootstrap_qualifier": {"type": "string"},
                 "context": {"type": "object"},
                 "class_name": {"type": "string"},
+                "stack_logical_id": {"type": "string"},
                 "bootstrapless_config": {
                     "type": "object",
                     "additionalProperties": False,
@@ -79,7 +85,7 @@ class CDK(TemplateHandler):
                         "image_asset_region_set": {"type": "string"},
                         "image_asset_repository_name": {"type": "string"},
                         "image_asset_tag_prefix": {"type": "string"},
-                        "template_bucket_name": {"type": "string"}
+                        "template_bucket_name": {"type": "string"},
                     },
                 }
             },
@@ -148,6 +154,14 @@ class CDK(TemplateHandler):
     def bootstrapless_config(self) -> dict:
         return self.arguments.get('bootstrapless_config', {})
 
+    @property
+    def path_is_to_cdk_json(self) -> bool:
+        return self.cdk_template_path.name == 'cdk.json'
+
+    @property
+    def stack_logical_id(self) -> Optional[str]:
+        return self.arguments.get('stack_logical_id')
+
     def handle(self) -> str:
         """
         Main Sceptre CDK Handler function
@@ -155,9 +169,15 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
+        if self.path_is_to_cdk_json:
+            builder = NonPythonCdkBuilder(self.logger, self.connection_manager)
+            context = self._create_bootstrapped_context()
+            return builder.build_template(self.cdk_template_path, context, self.stack_logical_id)
+
         stack_class: Type[SceptreCdkStack] = self._importer.import_class(self.cdk_template_path, self.cdk_class_name)
         if self.deployment_type == 'bootstrapped':
-            context, builder = self._get_bootstrapped_builder()
+            builder = self._bootstrapped_cdk_builder_class(self.logger, self.connection_manager)
+            context = self._create_bootstrapped_context()
         elif self.deployment_type == "bootstrapless":
             builder = self._get_bootstrapless_builder()
             context = self.cdk_context
@@ -172,22 +192,20 @@ class CDK(TemplateHandler):
         )
         return yaml.safe_dump(template_dict)
 
-    def _get_bootstrapped_builder(self) -> Tuple[Optional[dict], BootstrappedCdkBuilder]:
-        builder = self._bootstrapped_cdk_builder_class(self.logger, self.connection_manager)
-        # The qualifier might already be in the context, in which case we don't need to do
-        # anything
+    def _create_bootstrapped_context(self):
         if self.cdk_context and QUALIFIER_CONTEXT_KEY in self.cdk_context:
-            return self.cdk_context, builder
+            return self.cdk_context
         # As a convenience, the qualifier can be set as its own argument to simplify the
         # configuration. If it's passed this way, we need to add it to whatever context dict there
         # is, if one exists; We'll make one if it doesn't.
         if self.bootstrap_qualifier:
             context = self.cdk_context or {}
             context[QUALIFIER_CONTEXT_KEY] = self.bootstrap_qualifier
-            return context, builder
+            return context
+
         # If there's no qualifier specified anywhere, we're falling back to CDK's default
         # context-retrieval mechanisms.
-        return None, builder
+        return self.cdk_context
 
     def _get_bootstrapless_builder(self) -> BootstraplessCdkBuilder:
         return self._bootstrapless_cdk_builder_class(
@@ -195,4 +213,3 @@ class CDK(TemplateHandler):
             self.connection_manager,
             self.bootstrapless_config
         )
-
