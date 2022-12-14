@@ -120,6 +120,16 @@ class TestCDK(TestCase):
             self.sceptre_user_data
         )
 
+    def test_handle__bootstrapped__no_qualifier_but_has_context__builds_template_with_context(self):
+        self.arguments['context'] = context = {'key': 'value'}
+        self.handler.handle()
+        self.bootstrapped_builder_class.assert_any_call(self.handler.logger, self.connection_manager)
+        self.bootstrapped_builder_class.return_value.build_template.assert_any_call(
+            self.importer_class.return_value.import_class.return_value,
+            context,
+            self.sceptre_user_data
+        )
+
     def test_handle__bootstrapped__no_qualifier_or_context__builds_template_with_no_context(self):
         self.arguments['deployment_type'] = 'bootstrapped'
         self.handler.handle()

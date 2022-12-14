@@ -177,9 +177,9 @@ class CDK(TemplateHandler):
             context = self.cdk_context or {}
             context[QUALIFIER_CONTEXT_KEY] = self.bootstrap_qualifier
             return context, builder
-        # If there's no qualifier specified anywhere, we're falling back to CDK's default
-        # context-retrieval mechanisms.
-        return None, builder
+        # If there's no qualifier specified anywhere, we're falling back to either the specified
+        # context or the default CDK context (if no context is specified on the handler)
+        return self.cdk_context, builder
 
     def _get_bootstrapless_builder(self) -> BootstraplessCdkBuilder:
         return self._bootstrapless_cdk_builder_class(
