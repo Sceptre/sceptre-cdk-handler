@@ -46,7 +46,7 @@ class CdkBuilder(ABC):
         sceptre_user_data: Any
     ) -> dict: ...
 
-    def publish_artifacts(self, artifact_file: str, envs: Dict[str, str]):
+    def _publish_artifacts(self, artifact_file: str, envs: Dict[str, str]):
         self._logger.info(f'Publishing CDK assets')
         self._logger.debug(f'Assets manifest file: {artifact_file}')
         self._run_command(
@@ -149,7 +149,7 @@ class PythonCdkBuilder(CdkBuilder):
             self._logger.debug("Only asset is template; Skipping asset upload.")
         else:
             environment_variables = self._get_envs()
-            self.publish_artifacts(manifest_artifact.file, environment_variables)
+            self._publish_artifacts(manifest_artifact.file, environment_variables)
 
         template = self._get_template(assembly)
         return template
@@ -275,7 +275,7 @@ class CdkJsonBuilder(CdkBuilder):
                 self._logger.debug("Only asset is template; Skipping asset upload.")
             else:
                 assets_file = Path(output_dir, f'{self._stack_logical_id}.assets.json')
-                self.publish_artifacts(str(assets_file), environment_variables)
+                self._publish_artifacts(str(assets_file), environment_variables)
 
             template_file = Path(output_dir, f'{self._stack_logical_id}.template.json')
             template = self._get_template(template_file)

@@ -8,4 +8,4 @@ template_key_prefix: "templates"
 # "bootstrapped" deployment_type with an iam_role, that role will first be assumed and then CDK will
 # assume the bootstrapped roles for pushing image assets. The iam_role will always be used for
 # actually deploying the synthesized stack templates, however.
-iam_role: "arn:aws:iam::12345643232:role/my-deployment-role"
+#iam_role: "arn:aws:iam::12345654321:role/my-deployment-role"
