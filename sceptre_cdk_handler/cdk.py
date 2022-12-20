@@ -11,8 +11,11 @@ from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder, Bootstraples
 from sceptre_cdk_handler.class_importer import ClassImporter
 
 try:
+    # Literal was defined in py3.8.
     from typing import Literal
 except ImportError:
+    # If running this in py3.7, we'll need to instead import it from typing_extensions, which
+    # back-ports a lot of the typing constructs of later versions of Python.
     from typing_extensions import Literal
 
 DEFAULT_CLASS_NAME = 'CdkStack'
@@ -187,4 +190,3 @@ class CDK(TemplateHandler):
             self.connection_manager,
             self.bootstrapless_config
         )
-
