@@ -74,7 +74,7 @@ policies.
 The `"bootstrapped"` deployment_type causes Sceptre assets (namely S3-destined files and 
 ECR-destined images) to be deployed using the usual CDK-bootstrapped machinery. Specifically, by 
 referencing a "qualifier", CDK looks for a corresponding stack in the AWS account that contains the
-specific S3 bucket and ECR repo, as well as IAM roles to be assumed in order build and push those
+specific S3 bucket and ECR repo, as well as IAM roles to be assumed in order to build and push those
 assets up to the cloud.
 
 In order to use the "bootstrapped" deployment type to push assets to the cloud, a CDK bootstrap stack 
