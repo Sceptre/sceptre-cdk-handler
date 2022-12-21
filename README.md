@@ -23,7 +23,7 @@ By using this handler, you can now use CDK templates with all your favorite Scep
 
 ## How to use sceptre-cdk-handler
 
-The template "type" for this handler is `cdk`. 
+The template "type" for this handler is `cdk`.
 
 ### Arguments:
 
@@ -48,7 +48,7 @@ CloudFormation stack is created from the template, but can only contain string o
 #### Stack Outputs
 
 CloudFormation stack outputs can be defined in the CDK stack and then referenced from other Sceptre stacks using the
-standard Sceptre `!stack_output` resolver. 
+standard Sceptre `!stack_output` resolver.
 
 #### CDK Feature Flags and Custom Bootstrap
 
@@ -56,7 +56,7 @@ To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featuref
 [CDK Bootstrap](https://docs.aws.amazon.com/cdk/v2/guide/bootstrapping.html) qualifier, set these in the handler's
 `context` argument. See [sceptre-example](sceptre-example) for an example of this.
 
-Reminder: the `context` argument is a standard Sceptre resolvable property, so resolvers and/or Jinja variables can be used in the value. 
+Reminder: the `context` argument is a standard Sceptre resolvable property, so resolvers and/or Jinja variables can be used in the value.
 
 ### How does this handler work?
 
@@ -92,7 +92,7 @@ permissions for these operations.
 
 To optionally manage the CDK bootstrap CloudFormation template and stack with Sceptre, the bootstrap
 template can be generated using the AWS CDK CLI: `cdk bootstrap --show-template > cdk-bootstrap.yaml`.
-This can be deployed into a stack using the standard Sceptre process. 
+This can be deployed into a stack using the standard Sceptre process.
 
 ### Example Sceptre CDK Stack
 
