@@ -37,13 +37,13 @@ class CommandChecker:
         Args:
             package: str - The name of the node package to check
         """
-        workspace_result = self._subprocess_run(f'npm list {package}')
+        workspace_result = self._subprocess_run(f'npm list {package}', shell=True)
         self._logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
 
         if workspace_result.returncode == 0:
             return True
 
-        global_result = self._subprocess_run(f'npm --global list {package}')
+        global_result = self._subprocess_run(f'npm --global list {package}', shell=True)
         self._logger.debug(f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
 
         return global_result.returncode == 0

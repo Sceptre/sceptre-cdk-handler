@@ -75,6 +75,7 @@ class TestBootstrappedCdkBuilder(TestCase):
         )
 
         self.stack_class = create_autospec(SceptreCdkStack)
+        self.stack_class.__name__ = "MyFancyStack"
         self.context = {'hello': 'you'}
         self.sceptre_user_data = {'user': 'data'}
 
@@ -112,7 +113,7 @@ class TestBootstrappedCdkBuilder(TestCase):
     def test_build_template__no_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.credentials.token = None
         self.build()
-        expected_command = f'npx cdk-assets -v publish --path asset/file/path'
+        expected_command = 'npx cdk-assets -v publish --path asset/file/path'
         expected_envs = {
             **self.environment_variables,
             **{
@@ -149,7 +150,7 @@ class TestBootstrappedCdkBuilder(TestCase):
     def test_build_template__with_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.credentials.token = "special session token"
         self.build()
-        expected_command = f'npx cdk-assets -v publish --path asset/file/path'
+        expected_command = 'npx cdk-assets -v publish --path asset/file/path'
         expected_envs = {
             **self.environment_variables,
             **{
@@ -232,6 +233,7 @@ class TestBootstraplessCdkBuilder(TestCase):
         )
 
         self.stack_class = create_autospec(SceptreCdkStack)
+        self.stack_class.__name__ = "MyFancyBootstraplessStack"
         self.context = {'hello': 'you'}
         self.sceptre_user_data = {'user': 'data'}
 
