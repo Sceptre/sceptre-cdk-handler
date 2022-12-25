@@ -21,6 +21,7 @@ class SceptreCdkStack(aws_cdk.Stack):
 
 
 class CdkBuilder(ABC):
+    """A base class for CDK builders to define the interface they all must meet."""
     STACK_LOGICAL_ID = 'CDKStack'
 
     @abstractmethod
@@ -33,7 +34,7 @@ class CdkBuilder(ABC):
 
 
 class BootstrappedCdkBuilder(CdkBuilder):
-
+    """A CdkBuilder for stacks utilizing the CDK bootstrap stack for asset-related actions."""
     def __init__(
         self,
         logger: logging.Logger,
@@ -172,6 +173,9 @@ class BootstrappedCdkBuilder(CdkBuilder):
 
 
 class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
+    """A CdkBuilder that does not use the CDK bootstrap stack for asset actions; Instead, specific
+    asset-required resources can be specified in the synthesizer_config.
+    """
     def __init__(
         self,
         logger: logging.Logger,

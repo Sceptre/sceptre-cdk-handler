@@ -4,6 +4,7 @@ from logging import Logger
 
 
 class CommandChecker:
+    """A utility for checking if specific commands and node packages exist in the environment."""
     def __init__(
         self,
         logger: Logger,
