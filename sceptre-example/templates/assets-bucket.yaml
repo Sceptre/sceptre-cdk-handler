@@ -1,0 +1,14 @@
+# This is a assets bucket that we can use for All of Sceptre's templates via the
+# template_bucket_name. We can use this for the file_asset_bucket_name for the bootstrapless
+# deployment_type
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+    Bucket:
+        Type: AWS::S3::Bucket
+        Properties: {}
+
+
+Outputs:
+    BucketName:
+        Value: !Ref Bucket

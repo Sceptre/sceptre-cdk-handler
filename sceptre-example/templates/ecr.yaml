@@ -1,0 +1,11 @@
+# This is just the simplest possible ECR repository to support image assets for the "bootstrapless"
+# deployment_type. You won't need this if you're using the "bootstrapped" deployment_type.
+AWSTemplateFormatVersion: "2010-09-09"
+
+Resources:
+    Repository:
+        Type: AWS::ECR::Repository
+
+Outputs:
+    RepoName:
+        Value: !Ref Repository
