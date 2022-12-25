@@ -4,11 +4,13 @@ from typing import Any, Optional, Tuple, Type
 
 import yaml
 from sceptre.connection_manager import ConnectionManager
+from sceptre.exceptions import SceptreException
 from sceptre.helpers import normalise_path
 from sceptre.template_handlers import TemplateHandler
 
 from sceptre_cdk_handler.cdk_builder import BootstrappedCdkBuilder, BootstraplessCdkBuilder, SceptreCdkStack
 from sceptre_cdk_handler.class_importer import ClassImporter
+from sceptre_cdk_handler.command_checker import CommandChecker
 
 try:
     # Literal was defined in py3.8.
@@ -38,7 +40,8 @@ class CDK(TemplateHandler):
         *,
         importer_class=ClassImporter,
         bootstrapped_cdk_builder_class=BootstrappedCdkBuilder,
-        bootstrapless_cdk_builder_class=BootstraplessCdkBuilder
+        bootstrapless_cdk_builder_class=BootstraplessCdkBuilder,
+        command_checker_class=CommandChecker
     ):
         super().__init__(
             name=name,
@@ -50,6 +53,7 @@ class CDK(TemplateHandler):
         self._importer = importer_class()
         self._bootstrapped_cdk_builder_class = bootstrapped_cdk_builder_class
         self._bootstrapless_cdk_builder_class = bootstrapless_cdk_builder_class
+        self._command_checker = command_checker_class(self.logger)
 
     def schema(self):
         """
@@ -190,3 +194,32 @@ class CDK(TemplateHandler):
             self.connection_manager,
             self.bootstrapless_config
         )
+
+    def validate(self):
+        super().validate()
+        self._check_prerequisites()
+
+    def _check_prerequisites(self) -> None:
+        """
+        Checks the command and Node package requirements for the handler.
+
+        Raises:
+            SceptreException: Command prerequisite not found
+            SceptreException: Node Package prerequisite not found
+        """
+        # Check Command Prerequisites
+        cmd_prerequisites = [
+            'node',
+            'npx'
+        ]
+        for cmd_prerequisite in cmd_prerequisites:
+            if not self._command_checker.cmd_exists(cmd_prerequisite):
+                raise SceptreException(f"Command prerequisite '{cmd_prerequisite}' not found")
+
+        # Check Node Package Prerequisites
+        node_prerequisites = [
+            'cdk-assets'
+        ]
+        for node_prerequisite in node_prerequisites:
+            if not self._command_checker.node_package_exists(node_prerequisite):
+                raise SceptreException(f"Node Package prerequisite '{node_prerequisite}' not found")
