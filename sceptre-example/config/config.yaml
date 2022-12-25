@@ -8,4 +8,26 @@ template_key_prefix: "templates"
 # "bootstrapped" deployment_type with an iam_role, that role will first be assumed and then CDK will
 # assume the bootstrapped roles for pushing image assets. The iam_role will always be used for
 # actually deploying the synthesized stack templates, however.
-#iam_role: "arn:aws:iam::12345654321:role/my-deployment-role"
+iam_role: "arn:aws:iam::12345643232:role/my-deployment-role"
+
+# If you plan to specify the CDK context for a number of stacks, you can add it as a custom config
+# on a StackGroup Config and then reference it on the CDK-based stacks.
+cdk_context:
+  '@aws-cdk/aws-lambda:recognizeLayerVersion': true
+  '@aws-cdk/core:checkSecretUsage': true
+  '@aws-cdk/core:target-partitions':
+    - aws
+    - aws-cn
+  '@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver': true
+  '@aws-cdk/aws-ec2:uniqueImdsv2TemplateName': true
+  '@aws-cdk/aws-ecs:arnFormatIncludesClusterName': true
+  '@aws-cdk/aws-iam:minimizePolicies': true
+  '@aws-cdk/core:validateSnapshotRemovalPolicy': true
+  '@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName': true
+  '@aws-cdk/aws-s3:createDefaultLoggingPolicy': true
+  '@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption': true
+  '@aws-cdk/aws-apigateway:disableCloudWatchRole': true
+  '@aws-cdk/core:enablePartitionLiterals': true
+  '@aws-cdk/aws-events:eventsTargetQueueSameAccount': true
+  '@aws-cdk/aws-iam:standardizedServicePrincipals': true
+  '@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker': true

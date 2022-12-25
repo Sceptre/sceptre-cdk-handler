@@ -42,7 +42,7 @@ a string.
 
 _So why use CDK and Sceptre together?_ Because CDK provides excellent template generation capabilities
 and Sceptre will gladly use those. Furthermore, Sceptre has the ability to easily wire together an
-entire environment _regardless of how that environment's CloudFormation templates are Generated._ Thus,
+entire environment _regardless of how that environment's CloudFormation templates are generated._ Thus,
 Sceptre will happily (and fairly intuitively) deploy (and "wire together") stacks developed in vanilla
 CloudFormation YAML/JSON, templates augmented with Jinja2, Troposphere-generated templates,
 AWS SAM templates, and CDK constructs. They can be deployed as a coherent environment that
@@ -74,7 +74,7 @@ policies.
 The `"bootstrapped"` deployment_type causes Sceptre assets (namely S3-destined files and
 ECR-destined images) to be deployed using the usual CDK-bootstrapped machinery. Specifically, by
 referencing a "qualifier", CDK looks for a corresponding stack in the AWS account that contains the
-specific S3 bucket and ECR repo, as well as IAM roles to be assumed in order build and push those
+specific S3 bucket and ECR repo, as well as IAM roles to be assumed in order to build and push those
 assets up to the cloud.
 
 In order to use the "bootstrapped" deployment type to push assets to the cloud, a CDK bootstrap stack
@@ -92,10 +92,11 @@ corresponds to the roles in the bootstrap stack.
 
 #### The "bootstrapless" deployment_type
 While the "bootstrapped" deployment_type is more similar to CDK's way of operating, it's less typical
-for Sceptre. Sceptre shines by allowing you to define infrastructure in different stacks and then
-"wire them together" using powerful (and very handy) hooks and resolvers. Thus, a more "Sceptre-like"
-way would be to avoid using the CDK bootstrap stack and just providing references to the required
-asset-related infrastructure with resolvers like `!stack_output`.
+for Sceptre. Sceptre shines by allowing you to define your infrastructure however you want (in however
+many stacks you want) and then "wire them together" using powerful (and very handy) hooks and
+resolvers (like `!stack_output`). Thus, a more "Sceptre-like" way would be to avoid using the CDK
+bootstrap stack and just providing references to the required asset-related infrastructure with
+resolvers like `!stack_output`.
 
 The "bootstrapless" deployment_type uses the [cdk-bootstrapless-synthesizer](https://github.com/aws-samples/cdk-bootstrapless-synthesizer)
 to handle assets without needing a bootstrap stack. Instead, you can provide the relevant asset-related
@@ -103,7 +104,28 @@ configurations as needed, pulling values from other stack outputs using resolver
 
 If you don't need to utilize a pre-existing bootstrap stack or don't need or want the overhead of
 having a bootstrap stack with all the infrastructure resources created along with that (many of which
-you might not actually need), the "bootstrapless" deployment_type is a simpler approach.
+you might not actually need), the "bootstrapless" deployment_type is a simpler approach. However,
+it will require you to supply the needed bucket, ECR repository, and other configurations if you're
+deploying file or image assets. These will need to be supplied on the `bootstrapless_config` argument.
+
+**Why wouldn't you want to use the CDK Boostrap stack if it provides "everything you'd need"?**
+A CDK bootstrap stack has a lot of resources, defined all together in a single stack. It's
+auto-generated via CDK. As such, it has a lot of resources you probably might not actually need,
+depending on the sort of resources you have in your stack. For example, if you aren't actually
+building and pushing images to ECR, creating a new ECR repository (which is in every CDK bootstrap
+stack) isn't necessary.
+
+Also, every CDK bootstrap stack contains 4 different IAM roles used for four different actions
+(cloudformation service role, execution role, file asset pushing, image asset pushing). While it is
+possible to make Sceptre use all four of these roles for all four of these actions, it's not the
+normal way Sceptre operates (where it uses the same role/profile for the all deployment actions).
+For more information on this handler and IAM, see [the section on IAM](#IAM-and-authentication).
+
+If there is an existing bootstrap stack you need Sceptre to integrate
+with, using `deployment_type: "bootstrapped"` will adhere to those norms. But if you don't need to
+integrate with an existing CDK ecosystem and the rest of your infrastructure is deployed with
+Sceptre as well, using `deployment_type: "bootstrapless"`  will prove a simpler, more straight-forward
+way to deploy and integrate your CDK-stacks into the rest of your environment.
 
 ### Making your stack class
 In order to properly support this handler's functionality, your Stack class on your Python file

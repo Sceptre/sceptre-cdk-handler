@@ -24,6 +24,7 @@ class SceptreCdkStack(aws_cdk.Stack):
 
 
 class CdkBuilder(ABC):
+    """A base class for CDK builders to define the interface they all must meet."""
     STACK_LOGICAL_ID = 'CDKStack'
 
     def __init__(
@@ -47,7 +48,7 @@ class CdkBuilder(ABC):
     ) -> dict: ...
 
     def _publish_artifacts(self, artifact_file: str, envs: Dict[str, str]):
-        self._logger.info(f'Publishing CDK assets')
+        self._logger.info('Publishing CDK assets')
         self._logger.debug(f'Assets manifest file: {artifact_file}')
         self._run_command(
             f'npx cdk-assets -v publish --path {artifact_file}',
@@ -161,7 +162,7 @@ class PythonCdkBuilder(CdkBuilder):
                 asset_artifacts = artifacts
                 break
         if asset_artifacts is None:
-            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+            raise exceptions.SceptreException('CDK Asset manifest artifact not found')
         return asset_artifacts
 
     @abstractmethod
@@ -187,7 +188,7 @@ class BootstrappedCdkBuilder(PythonCdkBuilder):
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug(f'CDK synthesizing CdkStack Class')
+        self._logger.debug('CDK synthesizing CdkStack Class')
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         self._stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data)
@@ -223,7 +224,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug(f'CDK synthesing CdkStack Class')
+        self._logger.debug(f'CDK synthesizing stack class: {self._stack_class.__name__}')
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         try:
@@ -296,7 +297,7 @@ class CdkJsonBuilder(CdkBuilder):
     def _get_assets_manifest(self, output_dir: str):
         assets_file = Path(output_dir, f'{self._stack_logical_id}.assets.json')
         if not assets_file.exists():
-            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+            raise exceptions.SceptreException('CDK Asset manifest artifact not found')
 
         with assets_file.open(mode='r') as f:
             assets_dict = json.load(f)
