@@ -20,35 +20,14 @@ template:
   deployment_type: bootstrapped
   # bootstrap_qualifier is optional, but it's better to be explicit about it, even if you do
   # want to use the "default" bootstrap stack in your account. Using !stack_output here ensures that
-  # we have a dependency between this stack and the bootstrap stack within Sceptre.
+  # we have a dependency between this stack and the bootstrap stack within Sceptre. If you don't
+  # add that output to the bootstrap stack, you can just pass the qualifier as a string here, but
+  # then you'll want to add an explicit dependency via `dependencies`. See note below on that.
   bootstrap_qualifier: !stack_output cdk-bootstrap.yaml::Qualifier
   # You can also pass CDK context key/value pairs. If you don't specify a context, the default
-  # context will be used (as determined by CDK).
-  context:
-    # You can technically specify the bootstrap qualifier this way too, which might be more familier
-    # compared with "normal" CDK configurations. Either here or using bootstrap_qualifier will have
-    # the same effect.
-    #'@aws-cdk/core:bootstrapQualifier': hnb659fds
-
-    # CDK Feature Flags
-    '@aws-cdk/aws-lambda:recognizeLayerVersion': true
-    '@aws-cdk/core:checkSecretUsage': true
-    '@aws-cdk/core:target-partitions':
-      - aws
-      - aws-cn
-    '@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver': true
-    '@aws-cdk/aws-ec2:uniqueImdsv2TemplateName': true
-    '@aws-cdk/aws-ecs:arnFormatIncludesClusterName': true
-    '@aws-cdk/aws-iam:minimizePolicies': true
-    '@aws-cdk/core:validateSnapshotRemovalPolicy': true
-    '@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName': true
-    '@aws-cdk/aws-s3:createDefaultLoggingPolicy': true
-    '@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption': true
-    '@aws-cdk/aws-apigateway:disableCloudWatchRole': true
-    '@aws-cdk/core:enablePartitionLiterals': true
-    '@aws-cdk/aws-events:eventsTargetQueueSameAccount': true
-    '@aws-cdk/aws-iam:standardizedServicePrincipals': true
-    '@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker': true
+  # context will be used (as determined by CDK). If you specify the context on the StackGroup config
+  # you can reference it via Jinja2 syntax like below.
+  context: {{cdk_context}}
   # You can explicitly define your stack name
   class_name: MyLambdaStack
 
@@ -60,6 +39,12 @@ parameters:
 # sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
 sceptre_user_data:
     special_variable: "use this directly at compile_time"
+
+# If you deploy the bootstrap stack via Sceptre but DON'T add outputs for the qualifier to reference
+# via !stack_output, you'll need to explicitly add a dependency this way so Sceptre knows to deploy
+# the bootstrap stack FIRST, before deploying this stack.
+#dependencies:
+#  cdk-bootstrap.yaml
 
 # If you want to use the bootstrapped deployment action role, you'll need to set that as the iam_role
 # But be careful if you do, since by default, the DeploymentActionRole doesn't actually have the

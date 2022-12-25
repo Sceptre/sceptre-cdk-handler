@@ -23,27 +23,11 @@ template:
   # You can explicitly define your stack name
   class_name: MyLambdaStack
   # You can also pass CDK context key/value pairs. If you don't specify a context, the default
-  # context will be used (as determined by CDK).
-  context:
-    # CDK feature flags
-    '@aws-cdk/aws-lambda:recognizeLayerVersion': true
-    '@aws-cdk/core:checkSecretUsage': true
-    '@aws-cdk/core:target-partitions':
-      - aws
-      - aws-cn
-    '@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver': true
-    '@aws-cdk/aws-ec2:uniqueImdsv2TemplateName': true
-    '@aws-cdk/aws-ecs:arnFormatIncludesClusterName': true
-    '@aws-cdk/aws-iam:minimizePolicies': true
-    '@aws-cdk/core:validateSnapshotRemovalPolicy': true
-    '@aws-cdk/aws-codepipeline:crossAccountKeyAliasStackSafeResourceName': true
-    '@aws-cdk/aws-s3:createDefaultLoggingPolicy': true
-    '@aws-cdk/aws-sns-subscriptions:restrictSqsDescryption': true
-    '@aws-cdk/aws-apigateway:disableCloudWatchRole': true
-    '@aws-cdk/core:enablePartitionLiterals': true
-    '@aws-cdk/aws-events:eventsTargetQueueSameAccount': true
-    '@aws-cdk/aws-iam:standardizedServicePrincipals': true
-    '@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker': true
+  # context will be used (as determined by CDK). If you specify the context on the StackGroup config
+  # you can reference it via Jinja2 syntax like below.
+  context: {{cdk_context}}
+
+
 
 # Parameters are DEPLOY-TIME values passed to the CloudFormation template. Your CDK stack construct
 # needs to have CfnParameters in order to support this, though.

@@ -21,6 +21,7 @@ class SceptreCdkStack(aws_cdk.Stack):
 
 
 class CdkBuilder(ABC):
+    """A base class for CDK builders to define the interface they all must meet."""
     STACK_LOGICAL_ID = 'CDKStack'
 
     @abstractmethod
@@ -33,7 +34,7 @@ class CdkBuilder(ABC):
 
 
 class BootstrappedCdkBuilder(CdkBuilder):
-
+    """A CdkBuilder for stacks utilizing the CDK bootstrap stack for asset-related actions."""
     def __init__(
         self,
         logger: logging.Logger,
@@ -66,7 +67,7 @@ class BootstrappedCdkBuilder(CdkBuilder):
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug(f'CDK synthesing CdkStack Class')
+        self._logger.debug(f'CDK synthesizing stack class: {stack_class.__name__}')
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data)
@@ -81,7 +82,7 @@ class BootstrappedCdkBuilder(CdkBuilder):
             return
 
         environment_variables = self._get_envs()
-        self._logger.info(f'Publishing CDK assets')
+        self._logger.info('Publishing CDK assets')
         self._logger.debug(f'Assets manifest file: {asset_artifacts.file}')
         self._run_command(
             f'npx cdk-assets -v publish --path {asset_artifacts.file}',
@@ -95,7 +96,7 @@ class BootstrappedCdkBuilder(CdkBuilder):
                 asset_artifacts = artifacts
                 break
         if asset_artifacts is None:
-            raise exceptions.SceptreException(f'CDK Asset manifest artifact not found')
+            raise exceptions.SceptreException('CDK Asset manifest artifact not found')
         return asset_artifacts
 
     def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
@@ -172,6 +173,9 @@ class BootstrappedCdkBuilder(CdkBuilder):
 
 
 class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
+    """A CdkBuilder that does not use the CDK bootstrap stack for asset actions; Instead, specific
+    asset-required resources can be specified in the synthesizer_config.
+    """
     def __init__(
         self,
         logger: logging.Logger,
@@ -199,7 +203,7 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
         cdk_context: Optional[dict],
         sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug(f'CDK synthesing CdkStack Class')
+        self._logger.debug(f'CDK synthesizing stack class: {stack_class.__name__}')
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         try:
