@@ -1,12 +1,18 @@
-region: eu-west-1
-project_code: sceptre
-account_id: 123456789012
-profile: account1
-cdk_context:
-  # CDK Bootstrap Qualifier
-  '@aws-cdk/core:bootstrapQualifier': hnb659fds
+profile: cnc
+project_code: cdk-handler-test
+region: us-west-2
+template_bucket_name: !stack_output assets-bucket.yaml::BucketName
+template_key_prefix: "templates"
+# If you use an iam_role, it will be the default role used to deploy when using the bootstrapless
+# deployment_type (unless a different role is specified in the bootstrapless_config). If using the
+# "bootstrapped" deployment_type with an iam_role, that role will first be assumed and then CDK will
+# assume the bootstrapped roles for pushing image assets. The iam_role will always be used for
+# actually deploying the synthesized stack templates, however.
+iam_role: "arn:aws:iam::12345643232:role/my-deployment-role"
 
-  # CDK Feature Flags
+# If you plan to specify the CDK context for a number of stacks, you can add it as a custom config
+# on a StackGroup Config and then reference it on the CDK-based stacks.
+cdk_context:
   '@aws-cdk/aws-lambda:recognizeLayerVersion': true
   '@aws-cdk/core:checkSecretUsage': true
   '@aws-cdk/core:target-partitions':

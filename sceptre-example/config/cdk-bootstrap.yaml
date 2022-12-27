@@ -1,0 +1,11 @@
+# This is the StackConfig for the bootstrap stack. The "bootstrapped" deployment_type of the cdk
+# handler requires a bootstrap stack with a matching qualifier. It can be deployed via Sceptre or
+# CDK. This is an example of deploying it via Sceptre.
+#
+# Note: You don't need a bootstrap stack if you use the "bootstrapless" deployment_type on the cdk
+# handler.
+template:
+  path: "cdk-bootstrap.yaml"
+
+parameters:
+  Qualifier: testing123

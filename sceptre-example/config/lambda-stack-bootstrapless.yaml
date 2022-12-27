@@ -1,0 +1,39 @@
+# This is an example of deploying the CDK stack using the "bootstrapless" deployment_type. This is
+# the more "Sceptre-like" way to configure your stacks. You can "wire together" other stacks into
+# this one using resolvers to populate values in the bootstrapless_config, parameters, and
+# sceptre_user_data. By default, the profile or role doing the deployments will also be used to push
+# the file and image assets.
+template:
+  type: cdk
+  # The path is always within your project's templates/ directory.
+  path: lambda_stack.py
+  deployment_type: bootstrapless
+  # bootstrapless_config are the snake_cased arguments passed to the cdk-bootstrapless-synthesizer
+  # for definitions of possible parameters, see the API docs here:
+  # https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md
+  bootstrapless_config:
+    # You can use !stack_attr to reference other stack attributes that happen
+    # to be set with resolvers to chain the resolver value. It makes sense to use the
+    # same bucket as Sceptre uses for its template uploads for your file assets.
+    file_asset_bucket_name: !stack_attr template_bucket_name
+    # It can be useful to apply the same prefix as your template_key_prefix to ensure your
+    # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
+    file_asset_prefix: {{template_key_prefix}}/cdk-assets
+    image_asset_repository_name: !stack_output ecr.yaml::RepoName
+  # You can explicitly define your stack name
+  class_name: MyLambdaStack
+  # You can also pass CDK context key/value pairs. If you don't specify a context, the default
+  # context will be used (as determined by CDK). If you specify the context on the StackGroup config
+  # you can reference it via Jinja2 syntax like below.
+  context: {{cdk_context}}
+
+
+
+# Parameters are DEPLOY-TIME values passed to the CloudFormation template. Your CDK stack construct
+# needs to have CfnParameters in order to support this, though.
+parameters:
+  SpecialEnv: "This is my Sceptre test"
+
+# sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
+sceptre_user_data:
+  special_variable: "use this directly at compile_time"
