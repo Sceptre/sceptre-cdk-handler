@@ -1,6 +1,6 @@
 [tool.coverage.run]
 branch = true
-source = [ "template_handler" ]
+source = [ "sceptre_cdk_handler" ]
 
 [tool.coverage.report]
 exclude_lines = [ ]

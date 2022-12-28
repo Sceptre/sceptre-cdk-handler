@@ -1,0 +1,2 @@
+# You can build and push custom dockerfiles to ECR. This is just a demonstration.
+FROM python:3.9

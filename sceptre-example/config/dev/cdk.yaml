@@ -1,9 +1,0 @@
-template:
-  type: cdk
-  path: CDK/s3.py
-  context: {{ cdk_context }}
-  class_name: CdkStack
-sceptre_user_data:
-  object_name: object-key.txt
-parameters:
-  BucketName: mybucket-{{ account_id }}-{{ region }}

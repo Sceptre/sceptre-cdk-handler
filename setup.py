@@ -7,11 +7,11 @@ __version__ = "1.0.0"
 
 # lowercase, use `-` as separator.
 TEMPLATE_HANDLER_NAME = 'sceptre-cdk-handler'
-# the template_handler call in sceptre e.g. type: custom_template_handler.
+# the template_handler call in sceptre e.g. type: custom_sceptre_cdk_handler.
 TEMPLATE_HANDLER_TYPE = 'cdk'
-# do not change. Rename template_handler/template_handler.py to template_handler/{TEMPLATE_HANDLER_TYPE}.py
-TEMPLATE_HANDLER_MODULE_NAME = f'template_handler.{TEMPLATE_HANDLER_TYPE}'
-# CamelCase name of template_handler class in template_handler.template_handler.
+# do not change. Rename template_handler/sceptre_cdk_handler.py to template_handler/{TEMPLATE_HANDLER_TYPE}.py
+TEMPLATE_HANDLER_MODULE_NAME = f'sceptre_cdk_handler.{TEMPLATE_HANDLER_TYPE}'
+# CamelCase name of template_handler class in sceptre_cdk_handler.sceptre_cdk_handler.
 TEMPLATE_HANDLER_CLASS = 'CDK'
 # One line summary description
 TEMPLATE_HANDLER_DESCRIPTION = 'AWS CDK Template Handler'
@@ -26,7 +26,9 @@ with open("README.md") as readme_file:
 
 install_requirements = [
     "sceptre>=2.7",
-    "aws_cdk-lib>=2.51.1"
+    "aws_cdk-lib>=2.0,<3.0",
+    "cdk-bootstrapless-synthesizer>=2.0,<3.0",
+    "typing-extensions"
 ]
 
 test_requirements = [

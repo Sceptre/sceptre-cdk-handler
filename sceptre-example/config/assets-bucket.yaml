@@ -1,0 +1,10 @@
+# This is the template bucket for Sceptre templates. This is optional for Sceptre. However, if using
+# the "bootstrapless" deployment type, you will be required to specify a file_assets_bucket_name, so
+# it makes sense to use the same bucket as your template bucket.
+template:
+  path: assets-bucket.yaml
+
+# per Sceptre docs, if you create the template bucket and use that in the project-level config.yaml
+# the template-bucket stack can't have a template_bucket_name (otherwise you'd have a circular
+# dependency)
+template_bucket_name: !no_value
