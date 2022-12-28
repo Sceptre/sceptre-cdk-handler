@@ -27,7 +27,7 @@ jobs:
             - 'venv'
 
       - run:
-          name: Install Resolver
+          name: Install Handler
           command: |
             . venv/bin/activate
             pip3 install -e .
@@ -60,11 +60,12 @@ jobs:
             pip3 install -r requirements.txt
             NODE_VERSION=16.13.0
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-            . ".nvm/nvm.sh"
+            export NVM_DIR=$HOME/.nvm
+            . "$NVM_DIR/nvm.sh"
             nvm install ${NODE_VERSION}
             nvm use v${NODE_VERSION}
             nvm alias default v${NODE_VERSION}
-            export PATH="$PWD/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
+            export PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 
       - save_cache:
           key:
