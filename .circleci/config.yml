@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:1.1.0
 
     steps:
       - checkout
@@ -39,7 +39,7 @@ jobs:
 
   lint-and-unit-test:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:1.1.0
 
     steps:
       - attach_workspace:
@@ -58,6 +58,13 @@ jobs:
             . venv/bin/activate
             pip3 install --upgrade pip
             pip3 install -r requirements.txt
+            NODE_VERSION=16.13.0
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+            . ".nvm/nvm.sh"
+            nvm install ${NODE_VERSION}
+            nvm use v${NODE_VERSION}
+            nvm alias default v${NODE_VERSION}
+            export PATH="$PWD/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
 
       - save_cache:
           key:
@@ -107,7 +114,7 @@ jobs:
 
   deploy-test:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:1.1.0
 
     steps:
       - checkout
@@ -145,7 +152,7 @@ jobs:
 
   deploy-production:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:1.1.0
 
     steps:
       - checkout
