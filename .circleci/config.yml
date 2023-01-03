@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: sceptreorg/sceptre-circleci:1.1.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
@@ -39,7 +39,7 @@ jobs:
 
   lint-and-unit-test:
     docker:
-      - image: sceptreorg/sceptre-circleci:1.1.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - attach_workspace:
@@ -75,7 +75,6 @@ jobs:
           name: Unit Test
           command: |
             . venv/bin/activate
-            apk add --update nodejs npm
             mkdir test-reports
             make test
 
@@ -108,7 +107,7 @@ jobs:
 
   deploy-test:
     docker:
-      - image: sceptreorg/sceptre-circleci:1.1.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
@@ -146,7 +145,7 @@ jobs:
 
   deploy-production:
     docker:
-      - image: sceptreorg/sceptre-circleci:1.1.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
