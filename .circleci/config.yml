@@ -15,10 +15,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
       - save_cache:
           key:
@@ -54,10 +55,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
       - save_cache:
           key:
@@ -114,10 +116,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
           paths:
             - 'venv'
@@ -152,10 +155,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
           paths:
             - 'venv'
