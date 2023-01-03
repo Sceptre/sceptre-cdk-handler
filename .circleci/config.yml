@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
@@ -15,10 +15,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
       - save_cache:
           key:
@@ -27,7 +28,7 @@ jobs:
             - 'venv'
 
       - run:
-          name: Install Resolver
+          name: Install Handler
           command: |
             . venv/bin/activate
             pip3 install -e .
@@ -39,7 +40,7 @@ jobs:
 
   lint-and-unit-test:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - attach_workspace:
@@ -54,10 +55,11 @@ jobs:
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
       - save_cache:
           key:
@@ -107,17 +109,18 @@ jobs:
 
   deploy-test:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
           paths:
             - 'venv'
@@ -145,17 +148,18 @@ jobs:
 
   deploy-production:
     docker:
-      - image: cloudreach/sceptre-circleci:0.8.0
+      - image: sceptreorg/sceptre-circleci:2.0.0
 
     steps:
       - checkout
       - run:
           name: Install Dependencies
           command: |
-            python3 -m venv venv
+            pyenv global 3.10
+            python -m venv venv
             . venv/bin/activate
-            pip3 install --upgrade pip
-            pip3 install -r requirements.txt
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
           paths:
             - 'venv'
