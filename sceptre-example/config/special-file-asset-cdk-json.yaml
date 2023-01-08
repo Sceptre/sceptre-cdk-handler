@@ -1,6 +1,39 @@
+# This template is an example of using the CDK template handler to deploy with a stack from a CDK
+# project that is not developed in Python. In this example, we're demonstrating how a TypeScript
+# stack Construct can be deployed via Sceptre using this handler.
+
 template:
   type: cdk
+  # The only real difference is that the path points to the `cdk.json` file at the root of a CDK
+  # project instead of a python file. The CDK Handler is smart enough to synthesize the template and
+  # publish any assets using the CDK CLI. This lets the handler support all CDK-supported languages
+  # rather than only Python.
   path: ../cdk-app/cdk.json
   deployment_type: bootstrapped
+  bootstrapless_config:
+    # You can use !stack_attr to reference other stack attributes that happen
+    # to be set with resolvers to chain the resolver value. It makes sense to use the
+    # same bucket as Sceptre uses for its template uploads for your file assets.
+    file_asset_bucket_name: !stack_attr template_bucket_name
+    # It can be useful to apply the same prefix as your template_key_prefix to ensure your
+    # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
+    file_asset_prefix: "{{template_key_prefix}}/cdk-assets"
+
   bootstrap_qualifier: !stack_output cdk-bootstrap.yaml::Qualifier
   stack_logical_id: CdkAppStack
+
+#  You can also use the bootstrapless deployment type with a cdk.json path, as long as you've
+#  explicitly set the BootstraplessStackSynthesizer on your Stack construct.
+#
+#  deployment_type: bootstrapless
+#    # bootstrapless_config are the snake_cased arguments passed to the cdk-bootstrapless-synthesizer
+#    # for definitions of possible parameters, see the API docs here:
+#    # https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md
+#    bootstrapless_config:
+#      # You can use !stack_attr to reference other stack attributes that happen
+#      # to be set with resolvers to chain the resolver value. It makes sense to use the
+#      # same bucket as Sceptre uses for its template uploads for your file assets.
+#      file_asset_bucket_name: !stack_attr template_bucket_name
+#      # It can be useful to apply the same prefix as your template_key_prefix to ensure your
+#      # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
+#      file_asset_prefix: "{{template_key_prefix}}/cdk-assets"
