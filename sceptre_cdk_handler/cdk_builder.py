@@ -246,6 +246,7 @@ class CdkJsonBuilder(CdkBuilder):
         connection_manager: ConnectionManager,
         cdk_json_path: Path,
         stack_logical_id: str,
+        bootstrapless_config: Dict[str, str],
         *,
         subprocess_run=subprocess.run,
         environment_variables=os.environ
@@ -258,6 +259,7 @@ class CdkJsonBuilder(CdkBuilder):
         )
         self._cdk_json_path = cdk_json_path
         self._stack_logical_id = stack_logical_id
+        self._bootstrapless_config = bootstrapless_config
 
     def build_template(self, cdk_context: Optional[dict], sceptre_user_data: Any):
         if sceptre_user_data:
@@ -267,6 +269,9 @@ class CdkJsonBuilder(CdkBuilder):
                 "will be ignored."
             )
         environment_variables = self._get_envs()
+        if self._bootstrapless_config:
+            self._add_bootstrapless_envs(environment_variables)
+
         with TemporaryDirectory() as output_dir:
             self._synthesize(output_dir, cdk_context, environment_variables)
             assets_manifest = self._get_assets_manifest(output_dir)
@@ -314,3 +319,7 @@ class CdkJsonBuilder(CdkBuilder):
     def _get_template(self, template_path: Path):
         with template_path.open(mode='r') as f:
             return json.load(f)
+
+    def _add_bootstrapless_envs(self, environment_variables: Dict[str, str]):
+        for key, value in self._bootstrapless_config.items():
+            environment_variables[f'BSS_{value.upper()}'] = value

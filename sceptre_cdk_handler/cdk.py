@@ -75,7 +75,7 @@ class CDK(TemplateHandler):
                 "path": {"type": "string"},
                 "deployment_type": {
                     "type": "string",
-                    "enum": ["bootstrapped", "bootstrapless", "cdk_json"]
+                    "enum": ["bootstrapped", "bootstrapless"]
                 },
                 "bootstrap_qualifier": {"type": "string"},
                 "context": {"type": "object"},
@@ -96,7 +96,7 @@ class CDK(TemplateHandler):
                         "image_asset_tag_prefix": {"type": "string"},
                         "template_bucket_name": {"type": "string"},
                     },
-                }
+                },
             },
             "required": [
                 "path",
@@ -142,7 +142,7 @@ class CDK(TemplateHandler):
         return self.arguments.get('bootstrap_qualifier')
 
     @property
-    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless', 'cdk_json']:
+    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless']:
         """The way Sceptre should handle the deployment of file and image assets. Can be one of
         "bootstrapped" or "bootstrapless".
         """
@@ -165,21 +165,19 @@ class CDK(TemplateHandler):
 
     def validate(self):
         self._check_prerequisites()
-        if self.deployment_type == 'cdk_json':
+        if self.path_is_to_cdk_json:
             self._check_cdk_json()
-        if self.path_is_to_cdk_json and self.deployment_type != 'cdk_json':
+        if self.deployment_type == 'bootstrapped' and self.bootstrapless_config:
             raise TemplateHandlerArgumentsInvalidError(
-                "You cannot use a cdk.json file as your template path unless you use \"cdk_json\" "
-                "as your deployment_type."
+                "You cannot specify a bootstrapless_config with the bootstrapped deployment_type"
+            )
+        elif self.deployment_type == "bootstrapless" and self.bootstrap_qualifier:
+            raise TemplateHandlerArgumentsInvalidError(
+                "You cannot specify a bootstrap_qualifier with the bootstrapless deployment_type"
             )
         super().validate()
 
     def _check_cdk_json(self):
-        if not self.path_is_to_cdk_json:
-            raise TemplateHandlerArgumentsInvalidError(
-                "Using the cdk_json deployment_type requires the \"path\" argument to point to "
-                "the cdk.json file in your CDK project."
-            )
         if self.cdk_context and any(isinstance(v, (list, dict)) for v in self.cdk_context.values()):
             raise TemplateHandlerArgumentsInvalidError(
                 "You cannot use nested values within your CDK context when using the cdk_json "
@@ -199,27 +197,26 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
-        if self.deployment_type == 'cdk_json':
+        if self.path_is_to_cdk_json:
             builder = self._create_cdk_json_builder()
-            context = self._create_bootstrapped_context()
         elif self.deployment_type == 'bootstrapped':
             stack_class: Type[SceptreCdkStack] = self._importer.import_class(
                 self.cdk_template_path,
                 self.cdk_class_name
             )
             builder = self._create_bootstrapped_builder(stack_class)
-            context = self._create_bootstrapped_context()
+
         elif self.deployment_type == "bootstrapless":
             stack_class: Type[SceptreCdkStack] = self._importer.import_class(
                 self.cdk_template_path,
                 self.cdk_class_name
             )
             builder = self._create_bootstrapless_builder(stack_class)
-            context = self.cdk_context
         else:
             # It shouldn't be possible to get here due to the json schema validation
             raise ValueError("deployment_type must be 'bootstrapped' or 'bootstrapless'")
 
+        context = self._make_context_to_use()
         template_dict = builder.build_template(context, self.sceptre_user_data)
         return yaml.safe_dump(template_dict)
 
@@ -229,6 +226,7 @@ class CDK(TemplateHandler):
             self.connection_manager,
             self.cdk_template_path,
             self.stack_logical_id,
+            self.bootstrapless_config
         )
 
     def _create_bootstrapped_builder(self, stack_class: Type[SceptreCdkStack]) -> BootstrappedCdkBuilder:
@@ -239,7 +237,7 @@ class CDK(TemplateHandler):
         )
         return builder
 
-    def _create_bootstrapped_context(self):
+    def _make_context_to_use(self):
         if self.cdk_context and QUALIFIER_CONTEXT_KEY in self.cdk_context:
             return self.cdk_context
         # As a convenience, the qualifier can be set as its own argument to simplify the
