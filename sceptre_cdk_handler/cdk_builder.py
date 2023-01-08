@@ -268,6 +268,7 @@ class CdkJsonBuilder(CdkBuilder):
                 "to your stack must be done via the cdk context. All values in your sceptre_user_data "
                 "will be ignored."
             )
+
         environment_variables = self._get_envs()
         if self._bootstrapless_config:
             self._add_bootstrapless_envs(environment_variables)
