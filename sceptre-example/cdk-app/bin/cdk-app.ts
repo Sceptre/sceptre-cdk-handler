@@ -1,11 +1,6 @@
 #!/usr/bin/env node
 
-/* This is just the basic CDK app that is auto-generated using the CDK CLI. Just like the comments
-    below indicate, you can do things like lookup environment variables and perform context lookup,
-    etc... However, for optimum compatibility with Sceptre, it's best if you DO NOT hardcode an
-    account id or region; These will be implicitly passed by the Sceptre CDK handler via environment
-    variables and the credentials being used.
- */
+// This is just the basic CDK app that is auto-generated using the CDK CLI.
 
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
@@ -27,18 +22,4 @@ new CdkAppStack(app, 'CdkAppStack', {
    * the synthesizer to the appropriate resources. Thus, you don't need any arguments here, just set
    * the synthesizer this way and set whatever bootstrapless_config you need. */
   // synthesizer: new BootstraplessStackSynthesizer()
-
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
-
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
-
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });

@@ -12,6 +12,8 @@ export class CdkAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // You can create whatever sort of CDK resources you want, even those that include image and
+    // file assets.
     new aws_s3_assets.Asset(this, 'My file asset', {
       path: `${__dirname}/file-asset.txt`
     })
