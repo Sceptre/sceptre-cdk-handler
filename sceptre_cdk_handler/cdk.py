@@ -246,8 +246,10 @@ class CDK(TemplateHandler):
         return builder
 
     def _make_context_to_use(self):
+        # If there's already a qualifier in the context, there's nothing futher we'd need to do.
         if QUALIFIER_CONTEXT_KEY in self.cdk_context:
             return self.cdk_context
+
         # As a convenience, the qualifier can be set as its own argument to simplify the
         # configuration. If it's passed this way, we need to add it to whatever context dict there
         # is, if one exists; We'll make one if it doesn't.
@@ -256,8 +258,9 @@ class CDK(TemplateHandler):
             context[QUALIFIER_CONTEXT_KEY] = self.bootstrap_qualifier
             return context
 
-        # If there's no qualifier specified anywhere, we're falling back to CDK's default
-        # context-retrieval mechanisms.
+        # If there's no qualifier specified anywhere, we're either falling back to CDK's default
+        # qualifier (if we're using the bootstrapped deployment type) or we don't need a qualifier
+        # (if we're using the bootstrapless deployment type).
         return self.cdk_context
 
     def _create_bootstrapless_builder(self, stack_class) -> BootstraplessCdkBuilder:
