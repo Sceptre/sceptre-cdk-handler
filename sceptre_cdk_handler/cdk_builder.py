@@ -293,7 +293,7 @@ class CdkJsonBuilder(CdkBuilder):
         self._run_command(command, envs, str(self._cdk_json_path.parent.resolve()))
 
     def _create_synth_command(self, output_dir: str, cdk_context: Dict[str, str]):
-        command = f'npx cdk synth {self._stack_logical_id} -o {output_dir} '
+        command = f'npx cdk synth {self._stack_logical_id} -o {output_dir} -q '
         for key, value in cdk_context.items():
             command += f'--context {key}={value} '
 
@@ -322,4 +322,4 @@ class CdkJsonBuilder(CdkBuilder):
 
     def _add_bootstrapless_envs(self, environment_variables: Dict[str, str]):
         for key, value in self._bootstrapless_config.items():
-            environment_variables[f'BSS_{value.upper()}'] = value
+            environment_variables[f'BSS_{key.upper()}'] = value

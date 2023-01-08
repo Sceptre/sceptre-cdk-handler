@@ -126,7 +126,7 @@ class CDK(TemplateHandler):
     def cdk_context(self) -> dict:
         """The CDK context dict to pass to the app. Used to pass feature flags, etc..."""
 
-        return self.arguments.get('context')
+        return self.arguments.get('context', {})
 
     @property
     def cdk_class_name(self) -> str:
@@ -246,13 +246,13 @@ class CDK(TemplateHandler):
         return builder
 
     def _make_context_to_use(self):
-        if self.cdk_context and QUALIFIER_CONTEXT_KEY in self.cdk_context:
+        if QUALIFIER_CONTEXT_KEY in self.cdk_context:
             return self.cdk_context
         # As a convenience, the qualifier can be set as its own argument to simplify the
         # configuration. If it's passed this way, we need to add it to whatever context dict there
         # is, if one exists; We'll make one if it doesn't.
         if self.bootstrap_qualifier:
-            context = self.cdk_context or {}
+            context = self.cdk_context
             context[QUALIFIER_CONTEXT_KEY] = self.bootstrap_qualifier
             return context
 
