@@ -34,11 +34,11 @@ template:
 # Parameters are DEPLOY-TIME values passed to the CloudFormation template. Your CDK stack construct
 # needs to have CfnParameters in order to support this, though.
 parameters:
-    SpecialEnv: "This is my Sceptre test"
+  SpecialEnv: "This is my Sceptre test"
 
 # sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
 sceptre_user_data:
-    special_variable: "use this directly at compile_time"
+  special_variable: "use this directly at compile_time"
 
 # If you deploy the bootstrap stack via Sceptre but DON'T add outputs for the qualifier to reference
 # via !stack_output, you'll need to explicitly add a dependency this way so Sceptre knows to deploy

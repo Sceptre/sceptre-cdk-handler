@@ -3,13 +3,23 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.4.0
     hooks:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
-
   - repo: https://github.com/PyCQA/flake8
-    rev: 3.9.2
+    rev: 6.0.0
     hooks:
       - id: flake8
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.28.0
+    hooks:
+      - id: yamllint
+  - repo: https://github.com/awslabs/cfn-python-lint
+    rev: v0.72.5
+    hooks:
+      - id: cfn-python-lint
+        args:
+          - "-i=E0000"
+          - "-i=E1001"

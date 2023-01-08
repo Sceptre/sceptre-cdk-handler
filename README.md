@@ -57,6 +57,9 @@ CDK provides a means to accomplish.
 2) Install the AWS CDK following the instructions in [AWS CDK Getting Started](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html)
 3) Install the [CDK-Assets](https://www.npmjs.com/package/cdk-assets) NPM package using `npm install cdk-assets`
 
+If your project will require building and pushing docker image assets to ECR, you will also need to
+install docker and make it accessible on your PATH.
+
 ## How to use sceptre-cdk-handler
 
 The template "type" for this handler is `cdk`.
