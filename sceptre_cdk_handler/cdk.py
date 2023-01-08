@@ -188,14 +188,14 @@ class CDK(TemplateHandler):
     def _check_cdk_json(self):
         if self.cdk_context and any(isinstance(v, (list, dict)) for v in self.cdk_context.values()):
             raise TemplateHandlerArgumentsInvalidError(
-                "You cannot use nested values within your CDK context when using the cdk_json "
-                "deployment type. If you need to specify such values, put them in the context of"
-                "your cdk.json."
+                "You cannot use nested values within your CDK context when your path is to a cdk.json "
+                "file. If you need to specify such values, put them in the context of your cdk.json "
+                "file."
             )
         if self.stack_logical_id is None:
             raise TemplateHandlerArgumentsInvalidError(
-                "You must specify the logical ID of the stack in your app in order to use the "
-                "cdk_json deployment_type."
+                "You must specify the stack_logical_id of the stack in your app in order to use the "
+                "use a cdk.json file with the CDK handler."
             )
 
     def handle(self) -> str:
