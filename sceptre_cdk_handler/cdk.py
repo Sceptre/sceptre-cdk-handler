@@ -46,7 +46,7 @@ class CDK(TemplateHandler):
         importer_class=ClassImporter,
         bootstrapped_cdk_builder_class=BootstrappedCdkBuilder,
         bootstrapless_cdk_builder_class=BootstraplessCdkBuilder,
-        nonpython_cdk_bulder_class=CdkJsonBuilder,
+        cdk_json_builder_class=CdkJsonBuilder,
         command_checker_class=CommandChecker
     ):
         super().__init__(
@@ -59,7 +59,7 @@ class CDK(TemplateHandler):
         self._importer = importer_class()
         self._bootstrapped_cdk_builder_class = bootstrapped_cdk_builder_class
         self._bootstrapless_cdk_builder_class = bootstrapless_cdk_builder_class
-        self._non_python_cdk_builder_class = nonpython_cdk_bulder_class
+        self._cdk_json_builder_class = cdk_json_builder_class
         self._command_checker = command_checker_class(self.logger)
 
     def schema(self):
@@ -142,7 +142,7 @@ class CDK(TemplateHandler):
         return self.arguments.get('bootstrap_qualifier')
 
     @property
-    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless']:
+    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless', 'cdk_json']:
         """The way Sceptre should handle the deployment of file and image assets. Can be one of
         "bootstrapped" or "bootstrapless".
         """
@@ -203,10 +203,18 @@ class CDK(TemplateHandler):
             builder = self._create_cdk_json_builder()
             context = self._create_bootstrapped_context()
         elif self.deployment_type == 'bootstrapped':
-            builder, stack_class = self._create_bootstrapped_builder()
+            stack_class: Type[SceptreCdkStack] = self._importer.import_class(
+                self.cdk_template_path,
+                self.cdk_class_name
+            )
+            builder = self._create_bootstrapped_builder(stack_class)
             context = self._create_bootstrapped_context()
         elif self.deployment_type == "bootstrapless":
-            builder = self._create_bootstrapless_builder()
+            stack_class: Type[SceptreCdkStack] = self._importer.import_class(
+                self.cdk_template_path,
+                self.cdk_class_name
+            )
+            builder = self._create_bootstrapless_builder(stack_class)
             context = self.cdk_context
         else:
             # It shouldn't be possible to get here due to the json schema validation
@@ -215,25 +223,21 @@ class CDK(TemplateHandler):
         template_dict = builder.build_template(context, self.sceptre_user_data)
         return yaml.safe_dump(template_dict)
 
-    def _create_cdk_json_builder(self):
-        return CdkJsonBuilder(
+    def _create_cdk_json_builder(self) -> CdkJsonBuilder:
+        return self._cdk_json_builder_class(
             self.logger,
             self.connection_manager,
             self.cdk_template_path,
             self.stack_logical_id,
         )
 
-    def _create_bootstrapped_builder(self):
-        stack_class: Type[SceptreCdkStack] = self._importer.import_class(
-            self.cdk_template_path,
-            self.cdk_class_name
-        )
+    def _create_bootstrapped_builder(self, stack_class: Type[SceptreCdkStack]) -> BootstrappedCdkBuilder:
         builder = self._bootstrapped_cdk_builder_class(
             self.logger,
             self.connection_manager,
             stack_class
         )
-        return builder, stack_class
+        return builder
 
     def _create_bootstrapped_context(self):
         if self.cdk_context and QUALIFIER_CONTEXT_KEY in self.cdk_context:
@@ -250,11 +254,7 @@ class CDK(TemplateHandler):
         # context-retrieval mechanisms.
         return self.cdk_context
 
-    def _create_bootstrapless_builder(self) -> BootstraplessCdkBuilder:
-        stack_class: Type[SceptreCdkStack] = self._importer.import_class(
-            self.cdk_template_path,
-            self.cdk_class_name
-        )
+    def _create_bootstrapless_builder(self, stack_class) -> BootstraplessCdkBuilder:
         return self._bootstrapless_cdk_builder_class(
             self.logger,
             self.connection_manager,
