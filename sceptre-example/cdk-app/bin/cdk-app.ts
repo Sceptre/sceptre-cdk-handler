@@ -12,7 +12,7 @@ import * as cdk from 'aws-cdk-lib';
 import { CdkAppStack } from '../lib/cdk-app-stack';
 // You can use the BootstraplessStackSynthesizer if you'd like to pass the required resources directly
 // instead of relying on the CDK Bootstrap stack.
-import { BootstraplessStackSynthesizer} from "cdk-bootstrapless-synthesizer";
+// import { BootstraplessStackSynthesizer} from "cdk-bootstrapless-synthesizer";
 
 const app = new cdk.App();
 
@@ -26,7 +26,7 @@ new CdkAppStack(app, 'CdkAppStack', {
    * set the appropriate environment variables from your bootstrapless_config so Sceptre can point
    * the synthesizer to the appropriate resources. Thus, you don't need any arguments here, just set
    * the synthesizer this way and set whatever bootstrapless_config you need. */
-  synthesizer: new BootstraplessStackSynthesizer()
+  // synthesizer: new BootstraplessStackSynthesizer()
 
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
