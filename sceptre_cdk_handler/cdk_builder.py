@@ -219,7 +219,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         self,
         logger: logging.Logger,
         connection_manager: ConnectionManager,
-        synthesizer_config: dict,
+        bootstrapless_config: dict,
         stack_class: Type[SceptreCdkStack],
         *,
         subprocess_run=subprocess.run,
@@ -232,7 +232,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         Args:
             logger: The Template Handler's logger
             connection_manager: The Template Handler's ConnectionManager
-            synthesizer_config: The configurations (in snake_case) used for the bootstrapless
+            bootstrapless_config: The configurations (in snake_case) used for the bootstrapless
                 synthesizer.
             stack_class: The stack class that will be synthesized
             subprocess_run: An callable used to run subprocesses
@@ -249,7 +249,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
             app_class=app_class,
             environment_variables=environment_variables
         )
-        self._synthesizer_config = synthesizer_config
+        self._bootstrapless_config = bootstrapless_config
         self._synthesizer_class = synthesizer_class
 
     def _synthesize(
@@ -261,7 +261,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         self._logger.debug(f'CDK Context: {cdk_context}')
         app = self._app_class(context=cdk_context)
         try:
-            synthesizer = self._synthesizer_class(**self._synthesizer_config)
+            synthesizer = self._synthesizer_class(**self._bootstrapless_config)
         except TypeError as e:
             raise TemplateHandlerArgumentsInvalidError(
                 "Error encountered attempting to instantiate the BootstraplessSynthesizer with the "
