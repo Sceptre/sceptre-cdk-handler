@@ -112,11 +112,9 @@ class CDK(TemplateHandler):
 
     def _resolve_template_path(self, template_path: str) -> Path:
         """
-        Return the project_path joined to template_path as
-        a string.
+        Return the project_path joined to template_path.
 
-        Note that os.path.join defers to an absolute path
-        if the input is absolute.
+        Note that os.path.join defers to an absolute path if the input is absolute.
         """
         return pathlib.Path(
             self.stack_group_config["project_path"],
@@ -160,6 +158,10 @@ class CDK(TemplateHandler):
         return self.cdk_template_path.name.lower() == 'cdk.json'
 
     @property
+    def path_is_to_python_file(self) -> bool:
+        return self.cdk_template_path.suffix == '.py'
+
+    @property
     def stack_logical_id(self) -> Optional[str]:
         return self.arguments.get('stack_logical_id')
 
@@ -167,6 +169,12 @@ class CDK(TemplateHandler):
         self._check_prerequisites()
         if self.path_is_to_cdk_json:
             self._check_cdk_json()
+        elif not self.path_is_to_python_file:
+            raise TemplateHandlerArgumentsInvalidError(
+                "The path argument must either reference a Python file with a CDK Stack class or a "
+                "cdk.json file at the root of a CDK project."
+            )
+
         if self.deployment_type == 'bootstrapped' and self.bootstrapless_config:
             raise TemplateHandlerArgumentsInvalidError(
                 "You cannot specify a bootstrapless_config with the bootstrapped deployment_type"
