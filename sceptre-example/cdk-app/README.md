@@ -1,14 +1,4 @@
-# Welcome to your CDK TypeScript project
+# Example Non-Python CDK project
 
-This is a blank project for CDK development with TypeScript.
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
-
-## Useful commands
-
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+This is an example CDJK project developed in TypeScript rather than Python. This should demonstrate
+how to configure a non-python CDK project so it can be deployed via Sceptre.
