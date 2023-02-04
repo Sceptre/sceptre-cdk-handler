@@ -1,5 +1,4 @@
 import logging
-import os
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -7,7 +6,6 @@ from typing import Any, Optional, Dict, Type
 
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
-from botocore.credentials import Credentials
 from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer
 from sceptre import exceptions
 from sceptre.connection_manager import ConnectionManager
@@ -42,13 +40,11 @@ class BootstrappedCdkBuilder(CdkBuilder):
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        environment_variables=os.environ
     ):
         self._logger = logger
         self._connection_manager = connection_manager
         self._subprocess_run = subprocess_run
         self._app_class = app_class
-        self._environment_variables = environment_variables
 
     def build_template(
         self,
@@ -133,33 +129,11 @@ class BootstrappedCdkBuilder(CdkBuilder):
         Returns:
             The dictionary of environment variables.
         """
-        envs = self._environment_variables.copy()
-        envs.pop("AWS_PROFILE", None)
-        # Set aws environment variables specific to whatever AWS configuration has been set on the
-        # stack's connection manager.
-        credentials: Credentials = self._connection_manager._get_session(
-            self._connection_manager.profile,
-            self._connection_manager.region,
-            self._connection_manager.iam_role
-        ).get_credentials()
+        envs = self._connection_manager.create_session_environment_variables()
         envs.update(
-            AWS_ACCESS_KEY_ID=credentials.access_key,
-            AWS_SECRET_ACCESS_KEY=credentials.secret_key,
-            # Most AWS SDKs use AWS_DEFAULT_REGION for the region
-            AWS_DEFAULT_REGION=self._connection_manager.region,
             # CDK frequently uses CDK_DEFAULT_REGION in its docs
             CDK_DEFAULT_REGION=self._connection_manager.region,
-            # cdk-assets requires AWS_REGION to determine what region's STS endpoint to use
-            AWS_REGION=self._connection_manager.region
         )
-
-        # There might not be a session token, so if there isn't one, make sure it doesn't exist in
-        # the envs being passed to the subprocess
-        if credentials.token is None:
-            envs.pop('AWS_SESSION_TOKEN', None)
-        else:
-            envs['AWS_SESSION_TOKEN'] = credentials.token
-
         return envs
 
     def _only_asset_is_template(self, asset_artifacts: aws_cdk.cx_api.AssetManifestArtifact):
@@ -184,7 +158,6 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        environment_variables=os.environ,
         synthesizer_class=BootstraplessStackSynthesizer
     ):
         super().__init__(
@@ -192,7 +165,6 @@ class BootstraplessCdkBuilder(BootstrappedCdkBuilder):
             connection_manager,
             subprocess_run=subprocess_run,
             app_class=app_class,
-            environment_variables=environment_variables
         )
         self._synthesizer_config = synthesizer_config
         self._synthesizer_class = synthesizer_class
