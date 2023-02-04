@@ -21,22 +21,19 @@ from sceptre_cdk_handler.cdk_builder import (
 class TestBootstrappedCdkBuilder(TestCase):
     def setUp(self):
         self.logger = Mock(logging.Logger)
-        self.profile = 'my_fancy_profile'
         self.region = 'us-west-2'
-        self.iam_role = 'arn:aws:something:or:another:role'
-        self.credentials = Mock(
-            access_key="key",
-            secret_key="secret",
-            token=None
-        )
+        self.environment_variables = {
+            "PATH": "blah:blah:blah",
+            "AWS_ACCESS_KEY_ID": "old key",
+            "AWS_SECRET_ACCESS_KEY": "old secret",
+            "AWS_SESSION_TOKEN": "old token"
+        }
 
         self.connection_manager = Mock(
             ConnectionManager,
             **{
-                'profile': self.profile,
                 'region': self.region,
-                'iam_role': self.iam_role,
-                '_get_session.return_value.get_credentials.return_value': self.credentials
+                'create_session_environment_variables.return_value': self.environment_variables
             }
         )
         self.subprocess_run = create_autospec(subprocess.run)
@@ -59,19 +56,12 @@ class TestBootstrappedCdkBuilder(TestCase):
             Mock(name="irrelevant_artifact"),
             self.manifest
         ]
-        self.environment_variables = {
-            "PATH": "blah:blah:blah",
-            "AWS_ACCESS_KEY_ID": "old key",
-            "AWS_SECRET_ACCESS_KEY": "old secret",
-            "AWS_SESSION_TOKEN": "old token"
-        }
 
         self.builder = BootstrappedCdkBuilder(
             self.logger,
             self.connection_manager,
             subprocess_run=self.subprocess_run,
             app_class=self.app_class,
-            environment_variables=self.environment_variables
         )
 
         self.stack_class = create_autospec(SceptreCdkStack)
@@ -110,56 +100,13 @@ class TestBootstrappedCdkBuilder(TestCase):
         self.build()
         self.subprocess_run.assert_not_called()
 
-    def test_build_template__no_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
-        self.credentials.token = None
+    def test_build_template__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
         self.build()
         expected_command = 'npx cdk-assets -v publish --path asset/file/path'
         expected_envs = {
             **self.environment_variables,
             **{
-                "AWS_ACCESS_KEY_ID": self.credentials.access_key,
-                "AWS_SECRET_ACCESS_KEY": self.credentials.secret_key,
-                "AWS_DEFAULT_REGION": self.connection_manager.region,
                 "CDK_DEFAULT_REGION": self.connection_manager.region,
-                "AWS_REGION": self.connection_manager.region
-            }
-        }
-        del expected_envs['AWS_SESSION_TOKEN']
-        self.subprocess_run.assert_any_call(
-            expected_command,
-            env=expected_envs,
-            shell=True,
-            stdout=sys.stderr,
-            check=True
-        )
-
-    def test_build_template__aws_session_token_in_envs__does_not_publish_assets_with_profile_specified(self):
-        self.environment_variables['AWS_PROFILE'] = 'dont_use_me'
-        called = False
-
-        def fake_subprocess(*args, env, **kwargs):
-            nonlocal called
-            self.assertNotIn('AWS_PROFILE', env)
-            called = True
-
-        self.subprocess_run.side_effect = fake_subprocess
-
-        self.build()
-        self.assertTrue(called)
-
-    def test_build_template__with_session_token__runs_cdk_assets_publish_on_the_asset_artifacts_file_with_correct_envs(self):
-        self.credentials.token = "special session token"
-        self.build()
-        expected_command = 'npx cdk-assets -v publish --path asset/file/path'
-        expected_envs = {
-            **self.environment_variables,
-            **{
-                "AWS_ACCESS_KEY_ID": self.credentials.access_key,
-                "AWS_SECRET_ACCESS_KEY": self.credentials.secret_key,
-                "AWS_SESSION_TOKEN": self.credentials.token,
-                "AWS_DEFAULT_REGION": self.connection_manager.region,
-                "CDK_DEFAULT_REGION": self.connection_manager.region,
-                "AWS_REGION": self.connection_manager.region
             }
         }
         self.subprocess_run.assert_any_call(
@@ -186,22 +133,18 @@ class TestBootstrappedCdkBuilder(TestCase):
 class TestBootstraplessCdkBuilder(TestCase):
     def setUp(self):
         self.logger = Mock(logging.Logger)
-        self.profile = 'my_fancy_profile'
         self.region = 'us-west-2'
-        self.iam_role = 'arn:aws:something:or:another:role'
-        self.credentials = Mock(
-            access_key="key",
-            secret_key="secret",
-            token=None
-        )
-
+        self.environment_variables = {
+            "PATH": "blah:blah:blah",
+            "AWS_ACCESS_KEY_ID": "old key",
+            "AWS_SECRET_ACCESS_KEY": "old secret",
+            "AWS_SESSION_TOKEN": "old token"
+        }
         self.connection_manager = Mock(
             ConnectionManager,
             **{
-                'profile': self.profile,
                 'region': self.region,
-                'iam_role': self.iam_role,
-                '_get_session.return_value.get_credentials.return_value': self.credentials
+                'create_session_environment_variables.return_value': self.environment_variables
             }
         )
         self.subprocess_run = create_autospec(subprocess.run)
@@ -212,12 +155,7 @@ class TestBootstraplessCdkBuilder(TestCase):
             Mock(name="irrelevant_artifact"),
             Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
         ]
-        self.environment_variables = {
-            "PATH": "blah:blah:blah",
-            "AWS_ACCESS_KEY_ID": "old key",
-            "AWS_SECRET_ACCESS_KEY": "old secret",
-            "AWS_SESSION_TOKEN": "old token"
-        }
+
         self.synthesizer_config = {
             'file_asset_bucket_name': 'my_bucket'
         }
@@ -228,7 +166,6 @@ class TestBootstraplessCdkBuilder(TestCase):
             self.synthesizer_config,
             subprocess_run=self.subprocess_run,
             app_class=self.app_class,
-            environment_variables=self.environment_variables,
             synthesizer_class=self.synthesizer_class
         )
 
