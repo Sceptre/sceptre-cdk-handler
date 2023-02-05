@@ -157,40 +157,41 @@ class TestBootstraplessCdkBuilder(TestCase):
             Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
         ]
 
-        self.synthesizer_config = {
+        self.bootstrapless_config = {
             'file_asset_bucket_name': 'my_bucket'
         }
         self.synthesizer_class = create_autospec(BootstraplessStackSynthesizer)
+        self.stack_class = create_autospec(SceptreCdkStack)
+        self.stack_class.__name__ = "MyFancyBootstraplessStack"
         self.builder = BootstraplessCdkBuilder(
             self.logger,
             self.connection_manager,
-            self.synthesizer_config,
+            self.bootstrapless_config,
+            self.stack_class,
             subprocess_run=self.subprocess_run,
             app_class=self.app_class,
             synthesizer_class=self.synthesizer_class
         )
 
-        self.stack_class = create_autospec(SceptreCdkStack)
-        self.stack_class.__name__ = "MyFancyBootstraplessStack"
         self.context = {'hello': 'you'}
         self.sceptre_user_data = {'user': 'data'}
 
     def test_build_template__no_synthesizer_config__instantiates_synthesizer_with_no_kwargs(self):
-        self.synthesizer_config.clear()
-        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
-        self.synthesizer_class.assert_any_call(**self.synthesizer_config)
+        self.bootstrapless_config.clear()
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.synthesizer_class.assert_any_call(**self.bootstrapless_config)
 
     def test_build_template__instantiates_synthesizer_with_synthesizer_config_kwargs(self):
-        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
-        self.synthesizer_class.assert_any_call(**self.synthesizer_config)
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.synthesizer_class.assert_any_call(**self.bootstrapless_config)
 
     def test_build_template__invalid_synthesizer_arguments__raises_template_handler_arguments_invalid_error(self):
-        self.synthesizer_config['bad'] = 'not-recognized'
+        self.bootstrapless_config['bad'] = 'not-recognized'
         with self.assertRaises(TemplateHandlerArgumentsInvalidError):
-            self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+            self.builder.build_template(self.context, self.sceptre_user_data)
 
     def test_build_template__instantiates_stack_with_synthesizer(self):
-        self.builder.build_template(self.stack_class, self.context, self.sceptre_user_data)
+        self.builder.build_template(self.context, self.sceptre_user_data)
         self.stack_class.assert_any_call(
             self.app_class.return_value,
             CdkBuilder.STACK_LOGICAL_ID,
