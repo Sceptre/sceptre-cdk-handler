@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -10,7 +9,6 @@ from typing import Any, Optional, Dict, Type
 
 import aws_cdk
 from aws_cdk.cx_api import CloudAssembly
-from botocore.credentials import Credentials
 from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer
 from sceptre import exceptions
 from sceptre.connection_manager import ConnectionManager
@@ -33,7 +31,6 @@ class CdkBuilder(ABC):
         connection_manager: ConnectionManager,
         *,
         subprocess_run=subprocess.run,
-        environment_variables=os.environ
     ):
         """A base class in the hierarchy for CdkBuilders that import and use a Python Stack Class
 
@@ -41,12 +38,10 @@ class CdkBuilder(ABC):
             logger: The Template Handler's logger
             connection_manager: The Template Handler's ConnectionManager
             subprocess_run: An callable used to run subprocesses
-            environment_variables: The system environment variables
         """
         self._logger = logger
         self._connection_manager = connection_manager
         self._subprocess_run = subprocess_run
-        self._environment_variables = environment_variables
 
     @abstractmethod
     def build_template(
@@ -95,33 +90,11 @@ class CdkBuilder(ABC):
         Returns:
             The dictionary of environment variables.
         """
-        envs = self._environment_variables.copy()
-        envs.pop("AWS_PROFILE", None)
-        # Set aws environment variables specific to whatever AWS configuration has been set on the
-        # stack's connection manager.
-        credentials: Credentials = self._connection_manager._get_session(
-            self._connection_manager.profile,
-            self._connection_manager.region,
-            self._connection_manager.iam_role
-        ).get_credentials()
+        envs = self._connection_manager.create_session_environment_variables()
         envs.update(
-            AWS_ACCESS_KEY_ID=credentials.access_key,
-            AWS_SECRET_ACCESS_KEY=credentials.secret_key,
-            # Most AWS SDKs use AWS_DEFAULT_REGION for the region
-            AWS_DEFAULT_REGION=self._connection_manager.region,
             # CDK frequently uses CDK_DEFAULT_REGION in its docs
             CDK_DEFAULT_REGION=self._connection_manager.region,
-            # cdk-assets requires AWS_REGION to determine what region's STS endpoint to use
-            AWS_REGION=self._connection_manager.region
         )
-
-        # There might not be a session token, so if there isn't one, make sure it doesn't exist in
-        # the envs being passed to the subprocess
-        if credentials.token is None:
-            envs.pop('AWS_SESSION_TOKEN', None)
-        else:
-            envs['AWS_SESSION_TOKEN'] = credentials.token
-
         return envs
 
 
@@ -134,7 +107,6 @@ class PythonCdkBuilder(CdkBuilder):
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        environment_variables=os.environ
     ):
         """A base class in the hierarchy for CdkBuilders that import and use a Python Stack Class
 
@@ -144,13 +116,11 @@ class PythonCdkBuilder(CdkBuilder):
             stack_class: The stack class that will be synthesized
             subprocess_run: An callable used to run subprocesses
             app_class: The CDK App class used to synthesize the template
-            environment_variables: The system environment variables
         """
         super().__init__(
             logger,
             connection_manager,
             subprocess_run=subprocess_run,
-            environment_variables=environment_variables
         )
         self._stack_class = stack_class
         self._app_class = app_class
@@ -224,7 +194,6 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        environment_variables=os.environ,
         synthesizer_class=BootstraplessStackSynthesizer
     ):
         """A PythonCdkBuilder that uses the BootstraplessStackSynthesizer to handle assets.
@@ -247,7 +216,6 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
             stack_class,
             subprocess_run=subprocess_run,
             app_class=app_class,
-            environment_variables=environment_variables
         )
         self._bootstrapless_config = bootstrapless_config
         self._synthesizer_class = synthesizer_class
@@ -286,7 +254,6 @@ class CdkJsonBuilder(CdkBuilder):
         bootstrapless_config: Dict[str, str],
         *,
         subprocess_run=subprocess.run,
-        environment_variables=os.environ
     ):
         """A CdkBuilder that uses the CDK CLI to synthesize the stack template.
 
@@ -307,7 +274,6 @@ class CdkJsonBuilder(CdkBuilder):
             logger,
             connection_manager,
             subprocess_run=subprocess_run,
-            environment_variables=environment_variables
         )
         self._cdk_json_path = cdk_json_path
         self._stack_logical_id = stack_logical_id
