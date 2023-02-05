@@ -56,16 +56,17 @@ class TestBootstrappedCdkBuilder(TestCase):
             Mock(name="irrelevant_artifact"),
             self.manifest
         ]
+        self.stack_class = create_autospec(SceptreCdkStack)
+        self.stack_class.__name__ = "MyFancyStack"
 
         self.builder = BootstrappedCdkBuilder(
             self.logger,
             self.connection_manager,
             subprocess_run=self.subprocess_run,
             app_class=self.app_class,
+            stack_class=self.stack_class
         )
 
-        self.stack_class = create_autospec(SceptreCdkStack)
-        self.stack_class.__name__ = "MyFancyStack"
         self.context = {'hello': 'you'}
         self.sceptre_user_data = {'user': 'data'}
 
@@ -75,7 +76,6 @@ class TestBootstrappedCdkBuilder(TestCase):
 
     def build(self):
         return self.builder.build_template(
-            self.stack_class,
             self.context,
             self.sceptre_user_data
         )
@@ -109,12 +109,13 @@ class TestBootstrappedCdkBuilder(TestCase):
                 "CDK_DEFAULT_REGION": self.connection_manager.region,
             }
         }
-        self.subprocess_run.assert_any_call(
+        self.subprocess_run.assert_called_once_with(
             expected_command,
             env=expected_envs,
             shell=True,
             stdout=sys.stderr,
-            check=True
+            check=True,
+            cwd=None
         )
 
     def test_build_template__returns_template_from_cloud_assembly_for_stack(self):
