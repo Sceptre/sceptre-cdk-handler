@@ -268,7 +268,6 @@ class CdkJsonBuilder(CdkBuilder):
             stack_logical_id: The LogicalID of the stack to be deployed as it is configured on the
                 App in the CDK project.
             subprocess_run: An callable used to run subprocesses
-            environment_variables: The system environment variables
         """
         super().__init__(
             logger,

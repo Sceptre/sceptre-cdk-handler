@@ -205,6 +205,8 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
+        # If the template path is to a cdk.json, then we'll assume it's a full CDK package that may
+        # or may not be in Python.
         if self.path_is_to_cdk_json:
             builder = self._create_cdk_json_builder()
         elif self.deployment_type == 'bootstrapped':

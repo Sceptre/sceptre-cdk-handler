@@ -1,5 +1,6 @@
 import importlib.machinery
 import importlib.util
+import sys
 from pathlib import Path
 from typing import Type
 
@@ -24,7 +25,8 @@ class ClassImporter:
             SceptreException: Template File not found
             SceptreException: importlib general exception
         """
-        template_module_name = template_path.stem
+        template_module_name = self._enable_import_hierarchy(template_path)
+
         loader = importlib.machinery.SourceFileLoader(template_module_name, str(template_path))
         spec = importlib.util.spec_from_loader(template_module_name, loader)
         template_module = importlib.util.module_from_spec(spec)
@@ -36,3 +38,23 @@ class ClassImporter:
             raise exceptions.SceptreException(
                 f"No class named  {class_name} on template at {template_path}"
             )
+
+    def _enable_import_hierarchy(self, template_path: Path) -> str:
+        resolved_template_path = template_path.resolve()
+        cwd = Path.cwd()
+        if cwd not in resolved_template_path.parents:
+            return template_path.stem
+
+        module_path_segments = [template_path.stem]
+        in_package_structure = True
+        for parent in resolved_template_path.parents:
+            sys.path.append(str(parent))
+            if in_package_structure and (parent / '__init__.py').exists() and parent.name.isidentifier():
+                module_path_segments.insert(0, parent.name)
+            elif in_package_structure:
+                in_package_structure = False
+
+            if parent == cwd:
+                break
+
+        return '.'.join(module_path_segments)

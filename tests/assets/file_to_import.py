@@ -1,3 +1,0 @@
-
-class MyFancyClassToImport:
-    attribute = "Success!"
