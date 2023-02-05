@@ -198,3 +198,23 @@ class TestBootstraplessCdkBuilder(TestCase):
             self.sceptre_user_data,
             synthesizer=self.synthesizer_class.return_value
         )
+
+
+class TestCdkJsonBuilder(TestCase):
+    def test_build_template__sceptre_user_data_specified__logs_warning(self):
+        assert False
+
+    def test_build_template__synthesizes_template_with_connection_manager_envs(self):
+        assert False
+
+    def test_build_template__bootstrapless_config_specified__synthesizes_template_with_bootstrapless_envs(self):
+        assert False
+
+    def test_build_template_asset_manifest_only_has_template__does_not_publish_assets(self):
+        assert False
+
+    def test_build_template__asset_manifest_has_other_assets__publishes_artifacts_with_connection_manager_envs(self):
+        assert False
+
+    def test_build_template__returns_template_from_json(self):
+        assert False
