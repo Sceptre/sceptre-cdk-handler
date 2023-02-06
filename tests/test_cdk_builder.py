@@ -1,6 +1,9 @@
+import argparse
+import json
 import logging
 import subprocess
 import sys
+from pathlib import Path
 from unittest import TestCase
 from unittest.mock import Mock, create_autospec
 
@@ -14,8 +17,9 @@ from sceptre_cdk_handler.cdk_builder import (
     BootstrappedCdkBuilder,
     BootstraplessCdkBuilder,
     SceptreCdkStack,
-    CdkBuilder
+    CdkBuilder, CdkJsonBuilder
 )
+from pyfakefs.fake_filesystem_unittest import TestCase as PyFakeFsTestCase
 
 
 class TestBootstrappedCdkBuilder(TestCase):
@@ -200,21 +204,121 @@ class TestBootstraplessCdkBuilder(TestCase):
         )
 
 
-class TestCdkJsonBuilder(TestCase):
+class TestCdkJsonBuilder(PyFakeFsTestCase):
+    def setUp(self):
+        self.setUpPyfakefs()
+
+        self.logger = Mock(logging.Logger)
+        self.region = 'us-west-2'
+        self.environment_variables = {
+            "PATH": "blah:blah:blah",
+            "AWS_ACCESS_KEY_ID": "old key",
+            "AWS_SECRET_ACCESS_KEY": "old secret",
+            "AWS_SESSION_TOKEN": "old token"
+        }
+        self.connection_manager = Mock(
+            ConnectionManager,
+            **{
+                'region': self.region,
+                'create_session_environment_variables.return_value': self.environment_variables.copy()
+            }
+        )
+        self.subprocess_run = create_autospec(subprocess.run, side_effect=self.fake_subprocess_run)
+        # self.app_class = create_autospec(aws_cdk.App)
+        # self.assembly = Mock(CloudAssembly)
+        # self.app_class.return_value.synth.return_value = self.assembly
+        # self.assembly.artifacts = [
+        #     Mock(name="irrelevant_artifact"),
+        #     Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
+        # ]
+        #
+        self.bootstrapless_config = {
+            'file_asset_bucket_name': 'my_bucket'
+        }
+        self.cdk_json_path = Path(self.fs.create_file('/path/to/my/cdk.json').path)
+        self.stack_logical_id = 'MyCdkStack'
+        self.builder = CdkJsonBuilder(
+            logger=self.logger,
+            connection_manager=self.connection_manager,
+            cdk_json_path=self.cdk_json_path,
+            stack_logical_id=self.stack_logical_id,
+            bootstrapless_config=self.bootstrapless_config,
+            subprocess_run=self.subprocess_run
+        )
+        self.context = {'hello': 'you'}
+        self.sceptre_user_data = {'user': 'data'}
+        self.expected_template_file_name = f'{self.stack_logical_id}.template.json'
+        self.expected_template = {}
+        self.manifest = {'files': {self.expected_template_file_name: {}}}
+
+        self.artifacts_published = False
+        self.synth_context = {}
+        self.subprocess_envs = {}
+
+    def fake_subprocess_run(self, command, *, env, shell, stdout, check, cwd):
+        self.assertTrue(shell)
+        self.assertTrue(check)
+        self.assertIs(sys.stderr, stdout)
+        parser = argparse.ArgumentParser(prog='npx', exit_on_error=False)
+        if command.startswith('npx cdk-assets'):
+            self.subprocess_envs['assets'] = env
+            parser.add_argument('--path')
+            parsed, _ = parser.parse_known_args(command.split(' '))
+            self.assertTrue(Path(parsed.path).exists())
+            self.artifacts_published = True
+        elif command.startswith('npx cdk synth'):
+            self.assertEqual(str(self.cdk_json_path.parent.resolve()), cwd)
+            self.subprocess_envs['synth'] = env
+            parser.add_argument('npx')
+            parser.add_argument('cdk')
+            parser.add_argument('synth')
+            parser.add_argument('stack_logical_id')
+            parser.add_argument('-o', '--output')
+            parser.add_argument('--context', action='append')
+            parsed, _ = parser.parse_known_args(command.split(' '))
+            self.synth_context = {
+                key: value for key, value in
+                [context.split('=') for context in parsed.context]
+            }
+            assets_file = Path(parsed.output, f'{parsed.stack_logical_id}.assets.json')
+            template_file = Path(parsed.output, f'{parsed.stack_logical_id}.template.json')
+            self.fs.create_file(str(assets_file), contents=json.dumps(self.manifest))
+            self.fs.create_file(str(template_file), contents=json.dumps(self.expected_template))
+
     def test_build_template__sceptre_user_data_specified__logs_warning(self):
-        assert False
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.assertTrue(self.logger.warning.called)
 
     def test_build_template__synthesizes_template_with_connection_manager_envs(self):
-        assert False
+        self.bootstrapless_config.clear()
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        expected_envs = {**self.environment_variables, "CDK_DEFAULT_REGION": self.region}
+        self.assertEqual(self.subprocess_envs['synth'], expected_envs)
 
     def test_build_template__bootstrapless_config_specified__synthesizes_template_with_bootstrapless_envs(self):
-        assert False
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        expected_envs = {**self.environment_variables, "CDK_DEFAULT_REGION": self.region}
+        for key, value in self.bootstrapless_config.items():
+            expected_envs[f'BSS_{key.upper()}'] = value
+        self.assertEqual(self.subprocess_envs['synth'], expected_envs)
 
     def test_build_template_asset_manifest_only_has_template__does_not_publish_assets(self):
-        assert False
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.assertFalse(self.artifacts_published)
 
-    def test_build_template__asset_manifest_has_other_assets__publishes_artifacts_with_connection_manager_envs(self):
-        assert False
+    def test_build_template__asset_manifest_has_other_file_assets__publishes_artifacts_with_connection_manager_envs(self):
+        self.manifest['files']['some_new_file.tar.gz'] = {'doesnt': 'matter'}
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.assertTrue(self.artifacts_published)
+
+    def test_build_template__asset_manifest_has_image_assets__publishes_artifacts_with_connection_manager_envs(self):
+        self.manifest['dockerImages'] = {'doesnt': 'matter'}
+        self.builder.build_template(self.context, self.sceptre_user_data)
+        self.assertTrue(self.artifacts_published)
 
     def test_build_template__returns_template_from_json(self):
-        assert False
+        result = self.builder.build_template(self.context, self.sceptre_user_data)
+        self.assertEqual(
+            self.expected_template,
+            result
+        )
