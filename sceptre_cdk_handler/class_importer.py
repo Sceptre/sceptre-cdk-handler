@@ -63,13 +63,12 @@ class ClassImporter:
             if in_package_structure and (parent / '__init__.py').exists() and parent.name.isidentifier():
                 module_path_segments.insert(0, parent.name)
             # But if the parent directory isn't a valid python package in name and structure, we'll
-            # indicate that we need to stop climbing.
+            # stop building out the module path.
             elif in_package_structure:
                 in_package_structure = False
 
-            # If we've climbed all the way up to the CWD or if we've climbed out of any package
-            # structure, we'll stop climbing any further.
-            if parent == cwd or not in_package_structure:
+            # If we've climbed all the way up to the CWD.
+            if parent == cwd:
                 break
 
         # We'll make the full module path by joining all the segments together.

@@ -272,6 +272,53 @@ In other words, using this handler lets you use resolvers, put your CDK stack in
 you name your stack according to Sceptre's naming conventions, `validate`, `diff`, and more! Basically,
 the CDK stack can be managed using Sceptre just like any other.
 
+### Importing from other files
+Your CDK Stack module _can_ import from other packages/modules in your local directory structure.
+This is useful to break your constructs up with a file-based organization. While you could
+theoretically point the CDK handler to any python file path on your computer, there are limitations
+on how other modules will be accessible for import:
+
+1. All modules/packages to be imported **must be somewhere inside your current working directory.**
+If the files you intend to import are _outside_ your CWD, they will not be accessible.
+2. They must _either_...
+   1. Be in the immediate directory structure between your CWD and the python file your
+handler is referencing via `path` _or_
+   2. Be inside importable python packages that _are_ in the immediate structure between your CWD and
+your handler's `path`.
+
+```
+other_directory/
+    file.py                         # You CANNOT import this because it is out of your CWD
+project_directory/
+   templates/                       # No __init__.py in here, but it's in the directory hierarchy of
+                                    # your_cdk_stack.py, so you can technically import any direct
+                                    # children of this directory.
+
+       random_python_file.py        # You CAN import this ("import random_python_file")
+       unrelated_directory/         # No __init__.py in here...
+           nested_dir/              # No __init__.py in here...
+               some_python_file.py  # You CANNOT import this because this isn't in a python package
+       my_cdk_files/
+           __init__.py              # this lets you import from this dir (my_cdk_files/)
+           constructs/
+               __init__.py          # This lets you import from this dir (constructs/)
+               ec2/
+                   __init__.py      # This lets you import from this dir (ec2/)
+                   vpc.py           # You CAN import this (my_cdk_files.constructs.ec2.vpc)
+                   autoscaling.py   # You CAN import this (my_cdk_files.constructs.ec2.autoscaling)
+           stacks/
+               __init__.py          # This lets you import from this dir (my_cdk_files/)
+               >> your_cdk_stack.py # This is where your CDK Handler points to
+   scripts/
+      some_dir/
+          random_python_file.py     # You cannot import this because it's not in the directory
+                                    # hierarchy of your_cdk_stack.py and it's not in a python package
+                                    # importable from any of the directories that ARE in that hierarchy.
+   app/
+       __init__.py                  # This makes app/ an importable python package
+       my_application_resources.py  # You CAN import this (app.my_application_resources)
+```
+
 ### IAM and authentication
 
 There are several dimensions to how using this handler applies to IAM roles, policies, and permissions.
