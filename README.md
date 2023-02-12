@@ -49,7 +49,7 @@ AWS SAM templates, and CDK constructs. They can be deployed as a coherent enviro
 interoperates, deployed with insight into the various dependencies between stacks. Furthermore,
 using Sceptre's powerful hooks, you can execute customized pre-deployment and post-deployment code
 to prepare the way for or clean up after a given stack deployment. This is powerful and not something
-CDK provides a means to accomplish.
+CDK otherwise provides a means to accomplish on its own.
 
 ## How to install sceptre-cdk-handler
 
@@ -63,6 +63,54 @@ install docker and make it accessible on your PATH.
 ## How to use sceptre-cdk-handler
 
 The template "type" for this handler is `cdk`.
+
+### Python Stack Classes vs. cdk.json
+
+The template `path` argument can either direct to a Python file with a `SceptreCdkStack class` (see
+"Making your Python stack class" below) or it can point a `cdk.json` file. Template synthesis and
+asset handling (both bootstrapped and bootstrapless) are fully supported by both approaches.
+
+#### Python Stack Classes
+If your CDK infrastructure is developed in Python (one of CDK's supported languages), creation and
+configuration of your CDK infrastructure can be done more simply by cutting out a lot of the extra
+CDK machinery and just pointing Sceptre at a Python file via `path` and a specific class on that
+file via `class_name`. The CDK Handler can have a tighter integration with your Stack Class if done
+this way, such as being able to provide more complex data structures in your cdk context and being
+able to pass `sceptre_user_data`. You won't need a lot of the other bootstrapped CDK files and
+configurations (such as a `cdk.json` file). You could really just have a single python file defining
+your Stack class!
+
+#### cdk.json
+Alternatively, you can point your template handler's `path` to a `cdk.json` file. This will let you
+utilize CDK infrastructure developed in _any supported CDK language_, not just Python. Thus, if you
+have used `cdk` to initialize a project and your `cdk.json` is valid, directing your template handler
+to that `cdk.json` will allow the CDK Template Handler to fully utilize your CDK project to generate
+the appropriate stack template(s).
+
+**Important caveats of using cdk.json:**
+1. It is assumed that the root directory for running CDK commands is whatever directory your cdk.json
+is in.
+2. You will be responsible for making sure that your PATH and environment is able to utilize whatever
+language/tooling that your CDK project is configured for (i.e. TypeScript, Go, Java, C#, etc...).
+The CDK Template Handler will be invoking CDK via a subprocess using the same PATH as it is invoked
+with. Furthermore, any additional packages used by your CDK project should be installed so they can
+be utilized. This might require some commands for environment setup being invoked before running
+any Sceptre commands.
+3. Complex data structures (i.e. lists and dicts) are not supported in your CDK context from Sceptre.
+You can explicitly set those up on your cdk.json (if they're required), but the CDK template handler
+will only accept simple key/value pairs for your context that it passes.
+4. `sceptre_user_data` is not supported for supplying values to the template handler. Utilize the
+CDK context if you need to pass values from Sceptre.
+5. You must pass the `stack_logical_id` parameter to the handler to identify the specific Stack's
+logical id that you are wanting to synthesize via CDK.
+6. The Bootstrapless Synthesizer _is_ supported and `bootstrapless_config` parameters will be
+converted to their associated environment variables and supplied to the CDK process. **However**,
+you will need to explicitly configure your Stack class with the Bootstrapless Synthesizer as
+documented in the [Bootstrapless Synthesizer Readme](https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/README.md)
+in order for those parameters to actually be utilized. Furthermore, the Bootstrapless Synthesizer
+will need to be published in your project's language and installed so it can be accessed. At the
+time this is being written, it only appears as if Python, JavaScript, and TypeScript are supported
+by the Bootstrapless Synthesizer.
 
 ### Deployment Types
 The CDK Handler supports two different deployment types, which function somewhat differently. These
@@ -113,7 +161,7 @@ deploying file or image assets. These will need to be supplied on the `bootstrap
 
 **Why wouldn't you want to use the CDK Boostrap stack if it provides "everything you'd need"?**
 A CDK bootstrap stack has a lot of resources, defined all together in a single stack. It's
-auto-generated via CDK. As such, it has a lot of resources you probably might not actually need,
+auto-generated via CDK. As such, it has a lot of resources you might not actually need,
 depending on the sort of resources you have in your stack. For example, if you aren't actually
 building and pushing images to ECR, creating a new ECR repository (which is in every CDK bootstrap
 stack) isn't necessary.
@@ -130,9 +178,11 @@ integrate with an existing CDK ecosystem and the rest of your infrastructure is 
 Sceptre as well, using `deployment_type: "bootstrapless"`  will prove a simpler, more straight-forward
 way to deploy and integrate your CDK-stacks into the rest of your environment.
 
-### Making your stack class
+### Making your Python stack class
+_Note:_ This section doesn't apply if you're referencing a `cdk.json` file for your `path` argument.
+
 In order to properly support this handler's functionality, your Stack class on your Python file
-should subclass [`sceptre_cdk_handler.SceptreCdkStack`](sceptre_cdk_handler/cdk_builder.py).
+should subclass [`sceptre_cdk_handler.SceptreCdkStack`](https://github.com/Sceptre/sceptre-cdk-handler/blob/main/sceptre_cdk_handler/cdk_builder.py).
 Furthermore, it should have this `__init__` signature and invoke the base class `__init__()` this
 way:
 
@@ -148,131 +198,7 @@ class CdkStack(SceptreCdkStack):
     # and then you can add your resources...
 ```
 
-### Creating your StackConfig
-Here is a simple example of how to configure the template handler. For a more complete Sceptre
-Project configuration, with examples of both `bootstrapped` and `bootstrapless` configurations,
-see [the example directory in this repo](sceptre-example/).
-
-```yaml
-template:
-    # To use the CDK handler, you should use the "cdk" template type
-    type: cdk
-    # The path is always within your project's templates/ directory.
-    path: lambda_stack.py
-    deployment_type: bootstrapless
-    # bootstrapless_config are the snake_cased arguments passed to the cdk-bootstrapless-synthesizer
-    # for definitions of possible parameters, see the API docs here:
-    # https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md
-    bootstrapless_config:
-        # You can use !stack_attr to reference other stack attributes that happen
-        # to be set with resolvers to chain the resolver value. It makes sense to use the
-        # same bucket as Sceptre uses for its template uploads for your file assets.
-        file_asset_bucket_name: !stack_attr template_bucket_name
-        # It can be useful to apply the same prefix as your template_key_prefix to ensure your
-        # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
-        file_asset_prefix: {{template_key_prefix}}/cdk-assets
-        # You can use !stack_output (and other resolvers) in all of these configurations, which is
-        # especially helpful when "wiring together" this stack with other stacks deployed in your
-        # environment.
-        image_asset_repository_name: !stack_output ecr.yaml::RepoName
-    # You can explicitly define your stack name, or use the default class name "CdkStack"
-    class_name: MyLambdaStack
-
-# Parameters are DEPLOY-TIME values passed to the CloudFormation template. Your CDK stack construct
-# needs to have CfnParameters in order to support this, though.
-parameters:
-    SpecialEnv: "This is my Sceptre test"
-
-# sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
-sceptre_user_data:
-    special_variable: "use this directly at compile_time"
-```
-
-### Arguments:
-
-* `path` (string, required): The path to the CDK template file, relative to the `templates/` directory of
-  your project. This should be a python file with your stack class, subclassing `SceptreCdkStack`.
-* `deployment_type` (string, required): This determines the way CDK assets should be pushed to the
-  cloud. Options are `"bootstrapless"` and `"bootstrapped"`. See section above on "How to use" for
-  more details.
-* `bootstrap_qualifier` (string, optional): This is only used if you are using the `bootstrapped`
-  deployment type. This qualifier refers to the qualifier on a given CDK bootstrap stack in your
-  AWS account, whether deployed via CDK externally or within the same Sceptre project. If you use
-  the `bootstrapped` deployment_type and do NOT specify a qualifier, CDK will default to the default
-  qualifier and look to use that in your account.
-* `class_name` (string, optional): The name of the class on your CDK template to synthesize.
-  Defaults to `CdkStack`.
-* `context` (dict, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html)
-for further info on this.
-* `bootstrapless_config` (dict, optional): This is only used if you are using the `bootstrapless`
-deployment type. The keys here are the snake-casings of the documented parameters using the
-[cdk-bootstrapless-synthesizer](https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md):
-    - "file_asset_bucket_name" (required if your stack has file assets)
-    - "file_asset_prefix"
-    - "file_asset_publishing_role_arn"
-    - "file_asset_region_set"
-    - "image_asset_account_id"
-    - "image_asset_publishing_role_arn"
-    - "image_asset_region_set"
-    - "image_asset_repository_name" (required if your stack has image assets)
-    - "image_asset_tag_prefix"
-    - "template_bucket_name"
-
-#### Passing Data to a CDK Stack
-
-There are two methods for passing data to a CDK Stack; using `sceptre_user_data` or CloudFormation parameters:
-
-##### Sceptre User Data
-
-Data can be passed to a CDK stack using the `sceptre_user_data` block of the Sceptre stack config.
-This will be resolved when the template is synthesized and can contain complex objects. Since
-`sceptre_user_data` is a resolvable property, you can use Resolvers to pass values from other
-deployed stacks and other sources as well.
-
-##### CloudFormation Parameters
-
-Data can be passed to a synthesized CDK template using standard CloudFormation parameters.
-These are resolved when the CloudFormation stack is created from the template, but can only contain
-string or list values as supported by Cloudformation. In order to use these, you need to create
-[`CfnParameter`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.CfnParameter.html) resources
-in your stack class.
-
-#### Stack Outputs
-
-CloudFormation stack outputs can be defined in the CDK stack and then referenced from other Sceptre
-stacks using the standard Sceptre `!stack_output` resolver. In order to do this, your Stack Class
-will need to create [`CfnOutput`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.CfnOutput.html)
-resources in your stack class.
-
-#### CDK Feature Flags and Custom Bootstrap
-
-To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featureflags.html), set these
-in the handler's `context` argument. See [lambda-stack-bootstrapped.yaml](sceptre-example/config/lambda-stack-bootstrapped.yaml)
-for an example of this.
-
-Reminder: the `context` argument is a standard Sceptre resolvable property, so resolvers and/or Jinja
-variables can be used for values.
-
-### How does this handler work?
-
-When using _only_ the CDK CLI (not Sceptre) to deploy using `cdk deploy`, the CDK CLI effectively performs
-the following steps:
-
-1. Synthesises any constructs defined within the CDK Class into a CloudFormation Template and a
-bundle of required assets.
-2. Publishes the assets to a CDK bootstrapped S3 bucket and/or ECR registry.
-3. Creates/updates a CloudFormation stack from the synthesized template.
-
-When you use Sceptre with this handler, the CDK handler performs steps 1-2 above to create a template
-that Sceptre can use and publish the assets, **but it does not use CDK to deploy it!**. Instead,
-Sceptre can use that template produced in step 1 above to perform all its usual commands with all
-it's usual magic!
-
-In other words, using this handler lets you use resolvers, put your CDK stack into StackGroups, let
-you name your stack according to Sceptre's naming conventions, `validate`, `diff`, and more! Basically,
-the CDK stack can be managed using Sceptre just like any other.
-
-### Importing from other files
+### Importing from other modules
 Your CDK Stack module _can_ import from other packages/modules in your local directory structure.
 This is useful to break your constructs up with a file-based organization. While you could
 theoretically point the CDK handler to any python file path on your computer, there are limitations
@@ -318,6 +244,145 @@ project_directory/
        __init__.py                  # This makes app/ an importable python package
        my_application_resources.py  # You CAN import this (app.my_application_resources)
 ```
+
+
+### Creating your StackConfig
+Here is a simple example of how to configure the template handler. For a more complete Sceptre
+Project configuration, with examples of both `bootstrapped` and `bootstrapless` configurations,
+see [the example directory in this repo](sceptre-example/).
+
+```yaml
+template:
+    # To use the CDK handler, you should use the "cdk" template type
+    type: cdk
+    # The path is (by default) within your project's templates/ directory. However, you can also
+    # make it relative to your templates directory, like "../my_cdk_app/cdk.json".
+    path: lambda_stack.py
+    deployment_type: bootstrapless
+    # bootstrapless_config are the snake_cased arguments passed to the cdk-bootstrapless-synthesizer
+    # for definitions of possible parameters, see the API docs here:
+    # https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md
+    bootstrapless_config:
+        # You can use !stack_attr to reference other stack attributes that happen
+        # to be set with resolvers to chain the resolver value. It makes sense to use the
+        # same bucket as Sceptre uses for its template uploads for your file assets.
+        file_asset_bucket_name: !stack_attr template_bucket_name
+        # It can be useful to apply the same prefix as your template_key_prefix to ensure your
+        # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
+        file_asset_prefix: {{template_key_prefix}}/cdk-assets
+        # You can use !stack_output (and other resolvers) in all of these configurations, which is
+        # especially helpful when "wiring together" this stack with other stacks deployed in your
+        # environment.
+        image_asset_repository_name: !stack_output ecr.yaml::RepoName
+    # You can explicitly define your stack name, or use the default class name "CdkStack"
+    class_name: MyLambdaStack
+
+# Parameters are DEPLOY-TIME values passed to the CloudFormation template. Your CDK stack construct
+# needs to have CfnParameters in order to support this, though.
+parameters:
+    SpecialEnv: "This is my Sceptre test"
+
+# sceptre_user_data is passed to your Stack Class's constructor for supplying values at COMPILE-TIME.
+sceptre_user_data:
+    special_variable: "use this directly at compile_time"
+```
+
+### Arguments:
+
+* `path` (string, required): The path to the CDK template file, relative to the `templates/` directory of
+  your project. This should be a python file with your stack class, subclassing `SceptreCdkStack`.
+* `deployment_type` (string, required): This determines the way CDK assets should be pushed to the
+  cloud. Options are `"bootstrapless"` and `"bootstrapped"`. See section above on "How to use" for
+  more details.
+* `bootstrap_qualifier` (string, optional): This is only used if you are using the `bootstrapped`
+  deployment type. This qualifier refers to the qualifier on a given CDK bootstrap stack in your
+  AWS account, whether deployed via CDK externally or within the same Sceptre project. If you use
+  the `bootstrapped` deployment_type and do NOT specify a qualifier, CDK will default to the default
+  qualifier and look to use that in your account.
+* `class_name` (string, optional): The name of the class on your CDK template to synthesize.
+  Defaults to `CdkStack`. This is only used if your `path` points to a Python file.
+* `context` (dict, optional): The context for the CDK Stack. See [CDK Context](https://docs.aws.amazon.com/cdk/v2/guide/context.html)
+for further info on this. This only supports lists and dicts as values if your `path` points to a
+Python file.
+* `stack_logical_id` (string, conditional): The name of the logical ID of the stack this handler
+references. This is only used (but required) if your `path` points to a `cdk.json` file.
+* `bootstrapless_config` (dict, optional): This is only used if you are using the `bootstrapless`
+deployment type. The keys here are the snake-casings of the documented parameters using the
+[cdk-bootstrapless-synthesizer](https://github.com/aws-samples/cdk-bootstrapless-synthesizer/blob/main/API.md):
+    - "file_asset_bucket_name" (required if your stack has file assets)
+    - "file_asset_prefix"
+    - "file_asset_publishing_role_arn"
+    - "file_asset_region_set"
+    - "image_asset_account_id"
+    - "image_asset_publishing_role_arn"
+    - "image_asset_region_set"
+    - "image_asset_repository_name" (required if your stack has image assets)
+    - "image_asset_tag_prefix"
+    - "template_bucket_name"
+
+### Passing Data to a CDK Stack
+
+There are three methods for passing data to a CDK Stack; using `sceptre_user_data` or CloudFormation parameters:
+
+#### Sceptre User Data
+
+Data can be passed to a CDK stack using the `sceptre_user_data` block of the Sceptre stack config.
+This will be resolved when the template is synthesized and can contain complex objects. Since
+`sceptre_user_data` is a resolvable property, you can use resolvers to pass values from other
+deployed stacks and other sources as well.x`
+
+**Note**: `sceptre_user_data` is not supported if your `path` is to a `cdk.json` file.
+
+#### CDK Context
+
+Data can be passed to a CDK application (and accessed in your stack) via the `context` template
+handler argument. Since Template handler arguments are resolvable, you can also use resolvers here.
+
+**Note**: Complex context values (in lists and dicts) are only supported for Python stacks. If your
+`path` is to a `cdk.json` file, only string values are supported.
+
+#### CloudFormation Parameters
+
+Data can be passed to a synthesized CDK template using standard CloudFormation parameters.
+These are resolved when the CloudFormation stack is created from the template, but can only contain
+string or list values as supported by Cloudformation. In order to use these, you need to create
+[`CfnParameter`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.CfnParameter.html) resources
+in your stack class.
+
+### Stack Outputs
+
+CloudFormation stack outputs can be defined in the CDK stack and then referenced from other Sceptre
+stacks using the standard Sceptre `!stack_output` resolver. In order to do this, your Stack Class
+will need to create [`CfnOutput`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.CfnOutput.html)
+resources in your stack class.
+
+### CDK Feature Flags and Custom Bootstrap
+
+To set any [CDK Feature Flags](https://docs.aws.amazon.com/cdk/v2/guide/featureflags.html), set these
+in the handler's `context` argument. See [lambda-stack-bootstrapped.yaml](sceptre-example/config/lambda-stack-bootstrapped.yaml)
+for an example of this.
+
+Reminder: the `context` argument is a standard Sceptre resolvable property, so resolvers and/or Jinja
+variables can be used for values.
+
+### How exactly does this handler work?
+
+When using _only_ the CDK CLI (not Sceptre) to deploy using `cdk deploy`, the CDK CLI effectively performs
+the following steps:
+
+1. Synthesises any constructs defined within the CDK Class into a CloudFormation Template and a
+bundle of required assets.
+2. Publishes the assets to a CDK bootstrapped S3 bucket and/or ECR registry.
+3. Creates/updates a CloudFormation stack from the synthesized template.
+
+When you use Sceptre with this handler, the CDK handler performs steps 1-2 above to create a template
+that Sceptre can use and publish the assets, **but it does not use CDK to deploy it!**. Instead,
+Sceptre can use that template produced in step 1 above to perform all its usual commands with all
+it's usual magic!
+
+In other words, using this handler lets you use resolvers, put your CDK stack into StackGroups, let
+you name your stack according to Sceptre's naming conventions, `validate`, `diff`, and more! Basically,
+the CDK stack can be managed using Sceptre just like any other.
 
 ### IAM and authentication
 
@@ -371,4 +436,4 @@ your iam_role, profile, or AWS environment credentials have permission to assume
 
 ### Example Sceptre CDK Stack
 
-[sceptre-example](sceptre-example)
+[sceptre-example](https://github.com/Sceptre/sceptre-cdk-handler/tree/main/sceptre-example)
