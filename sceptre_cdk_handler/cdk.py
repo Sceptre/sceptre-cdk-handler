@@ -234,7 +234,7 @@ class CDK(TemplateHandler):
         return self._cdk_json_builder_class(
             self.logger,
             self.connection_manager,
-            self.cdk_template_path,
+            self.cdk_template_path.resolve(),
             self.stack_logical_id,
             self.bootstrapless_config
         )

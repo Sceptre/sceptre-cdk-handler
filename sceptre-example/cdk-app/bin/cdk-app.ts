@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 // This is just the basic CDK app that is auto-generated using the CDK CLI.
-
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { CdkAppStack } from '../lib/cdk-app-stack';
