@@ -224,14 +224,6 @@ class TestCdkJsonBuilder(PyFakeFsTestCase):
             }
         )
         self.subprocess_run = create_autospec(subprocess.run, side_effect=self.fake_subprocess_run)
-        # self.app_class = create_autospec(aws_cdk.App)
-        # self.assembly = Mock(CloudAssembly)
-        # self.app_class.return_value.synth.return_value = self.assembly
-        # self.assembly.artifacts = [
-        #     Mock(name="irrelevant_artifact"),
-        #     Mock(spec=aws_cdk.cx_api.AssetManifestArtifact, file="asset/file/path")
-        # ]
-        #
         self.bootstrapless_config = {
             'file_asset_bucket_name': 'my_bucket'
         }
