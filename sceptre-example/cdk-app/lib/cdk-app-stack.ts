@@ -1,5 +1,5 @@
 /* This is an example Stack construct defined in CDK using a non-Python language. It is imported
-   and added to the CDK app in bin/cdk-app.ts. This isn't a very comprhensive example, but it's
+   and added to the CDK app in bin/cdk-app.ts. This isn't a very comprehensive example, but it's
    enough to demonstrate how a non-Python CDK app could be deployed via Sceptre, even if it has
    assets that need to be deployed.
  */
