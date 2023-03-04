@@ -12,7 +12,11 @@ from aws_cdk.cx_api import CloudAssembly
 from cdk_bootstrapless_synthesizer import BootstraplessStackSynthesizer
 from sceptre import exceptions
 from sceptre.connection_manager import ConnectionManager
-from sceptre.exceptions import TemplateHandlerArgumentsInvalidError
+from sceptre.exceptions import TemplateHandlerArgumentsInvalidError, SceptreException
+
+
+class CdkInvocationError(SceptreException):
+    pass
 
 
 class SceptreCdkStack(aws_cdk.Stack):
@@ -61,14 +65,19 @@ class CdkBuilder(ABC):
     def _run_command(self, command: str, env: Dict[str, str] = None, cwd: str = None):
         # We're assuming here that the cwd is the directory to run the command from. I'm not certain
         # that will always be correct...
-        result = self._subprocess_run(
-            command,
-            env=env,
-            shell=True,
-            stdout=sys.stderr,
-            check=True,
-            cwd=cwd
-        )
+        try:
+            result = self._subprocess_run(
+                command,
+                env=env,
+                shell=True,
+                stdout=sys.stderr,
+                check=True,
+                cwd=cwd
+            )
+        except subprocess.CalledProcessError as ex:
+            raise CdkInvocationError(
+                f"Error was encountered while building the template: {ex}"
+            ) from ex
 
         return result
 
