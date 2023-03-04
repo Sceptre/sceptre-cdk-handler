@@ -114,7 +114,7 @@ class PythonCdkBuilder(CdkBuilder):
             logger: The Template Handler's logger
             connection_manager: The Template Handler's ConnectionManager
             stack_class: The stack class that will be synthesized
-            subprocess_run: An callable used to run subprocesses
+            subprocess_run: A callable used to run subprocesses
             app_class: The CDK App class used to synthesize the template
         """
         super().__init__(
@@ -204,7 +204,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
             bootstrapless_config: The configurations (in snake_case) used for the bootstrapless
                 synthesizer.
             stack_class: The stack class that will be synthesized
-            subprocess_run: An callable used to run subprocesses
+            subprocess_run: A callable used to run subprocesses
             app_class: The CDK App class used to synthesize the template
             environment_variables: The system environment variables
             synthesizer_class: The BootstraplessStackSynthesizer class that will be instantiated and
@@ -267,7 +267,7 @@ class CdkJsonBuilder(CdkBuilder):
                 synthesizer.
             stack_logical_id: The LogicalID of the stack to be deployed as it is configured on the
                 App in the CDK project.
-            subprocess_run: An callable used to run subprocesses
+            subprocess_run: A callable used to run subprocesses
         """
         super().__init__(
             logger,
@@ -307,7 +307,7 @@ class CdkJsonBuilder(CdkBuilder):
 
     def _synthesize(self, output_dir: str, cdk_context: Optional[dict], envs: Dict[str, str]):
         command = self._create_synth_command(output_dir, cdk_context)
-        # Run the synth in with the cwd of the cdk.json's directory
+        # Run the synth with the cwd of the cdk.json's directory
         self._run_command(command, envs, str(self._cdk_json_path.parent.resolve()))
 
     def _create_synth_command(self, output_dir: str, cdk_context: Dict[str, str]):

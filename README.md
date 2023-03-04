@@ -66,8 +66,8 @@ The template "type" for this handler is `cdk`.
 
 ### Python Stack Classes vs. cdk.json
 
-The template `path` argument can either direct to a Python file with a `SceptreCdkStack class` (see
-"Making your Python stack class" below) or it can point a `cdk.json` file. Template synthesis and
+The template `path` argument can either specify a Python file with a `SceptreCdkStack class` (see
+"Making your Python stack class" below) or it can specify a `cdk.json` file. Template synthesis and
 asset handling (both bootstrapped and bootstrapless) are fully supported by both approaches.
 
 #### Python Stack Classes
@@ -322,16 +322,16 @@ deployment type. The keys here are the snake-casings of the documented parameter
 
 ### Passing Data to a CDK Stack
 
-There are three methods for passing data to a CDK Stack; using `sceptre_user_data` or CloudFormation parameters:
+There are three methods for passing data to a CDK Stack; using `sceptre_user_data`, CDK Context or CloudFormation parameters:
 
 #### Sceptre User Data
 
 Data can be passed to a CDK stack using the `sceptre_user_data` block of the Sceptre stack config.
 This will be resolved when the template is synthesized and can contain complex objects. Since
 `sceptre_user_data` is a resolvable property, you can use resolvers to pass values from other
-deployed stacks and other sources as well.x`
+deployed stacks and other sources as well.`
 
-**Note**: `sceptre_user_data` is not supported if your `path` is to a `cdk.json` file.
+**Note**: `sceptre_user_data` is not supported if your `path` points to a `cdk.json` file.
 
 #### CDK Context
 
@@ -339,7 +339,7 @@ Data can be passed to a CDK application (and accessed in your stack) via the `co
 handler argument. Since Template handler arguments are resolvable, you can also use resolvers here.
 
 **Note**: Complex context values (in lists and dicts) are only supported for Python stacks. If your
-`path` is to a `cdk.json` file, only string values are supported.
+`path` points to a `cdk.json` file, only string values are supported.
 
 #### CloudFormation Parameters
 

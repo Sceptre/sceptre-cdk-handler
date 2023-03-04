@@ -193,7 +193,7 @@ class CDK(TemplateHandler):
     def _check_cdk_json(self):
         if self.cdk_context and any(isinstance(v, (list, dict)) for v in self.cdk_context.values()):
             raise TemplateHandlerArgumentsInvalidError(
-                "You cannot use nested values within your CDK context when your path is to a cdk.json "
+                "You cannot use nested values within your CDK context when your path points to a cdk.json "
                 "file. If you need to specify such values, put them in the context of your cdk.json "
                 "file."
             )
@@ -210,7 +210,7 @@ class CDK(TemplateHandler):
         Returns:
             str - The CDK synthesised CloudFormation template
         """
-        # If the template path is to a cdk.json, then we'll assume it's a full CDK package that may
+        # If the template path points to a cdk.json file, then we'll assume it's a full CDK package that may
         # or may not be in Python.
         if self.path_is_to_cdk_json:
             builder = self._create_cdk_json_builder()
@@ -253,7 +253,7 @@ class CDK(TemplateHandler):
         return builder
 
     def _make_context_to_use(self):
-        # If there's already a qualifier in the context, there's nothing futher we'd need to do.
+        # If there's already a qualifier in the context, there's nothing further we'd need to do.
         if QUALIFIER_CONTEXT_KEY in self.cdk_context:
             return self.cdk_context
 
