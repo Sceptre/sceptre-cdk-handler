@@ -17,7 +17,7 @@ from sceptre_cdk_handler.cdk_builder import (
     BootstrappedCdkBuilder,
     BootstraplessCdkBuilder,
     SceptreCdkStack,
-    CdkBuilder, CdkJsonBuilder
+    CdkBuilder, CdkJsonBuilder, CdkInvocationError
 )
 from pyfakefs.fake_filesystem_unittest import TestCase as PyFakeFsTestCase
 
@@ -134,6 +134,11 @@ class TestBootstrappedCdkBuilder(TestCase):
         result = self.build()
         self.assertEqual(expected_template, result)
 
+    def test_build_template__running_cdk_assets_command_raises_called_process_error__reraises_cdk_invocation_error(self):
+        self.subprocess_run.side_effect = subprocess.CalledProcessError(1, 'bad command')
+        with self.assertRaises(CdkInvocationError):
+            self.build()
+
 
 class TestBootstraplessCdkBuilder(TestCase):
     def setUp(self):
@@ -203,6 +208,11 @@ class TestBootstraplessCdkBuilder(TestCase):
             synthesizer=self.synthesizer_class.return_value
         )
 
+    def test_build_template__running_cdk_assets_command_raises_called_process_error__reraises_cdk_invocation_error(self):
+        self.subprocess_run.side_effect = subprocess.CalledProcessError(1, 'bad command')
+        with self.assertRaises(CdkInvocationError):
+            self.builder.build_template(self.context, self.sceptre_user_data)
+
 
 class TestCdkJsonBuilder(PyFakeFsTestCase):
     def setUp(self):
@@ -247,18 +257,25 @@ class TestCdkJsonBuilder(PyFakeFsTestCase):
         self.synth_context = {}
         self.subprocess_envs = {}
 
+        self.raise_assets_error = False
+        self.raise_synth_error = False
+
     def fake_subprocess_run(self, command, *, env, shell, stdout, check, cwd):
         self.assertTrue(shell)
         self.assertTrue(check)
         self.assertIs(sys.stderr, stdout)
         parser = argparse.ArgumentParser(prog='npx', exit_on_error=False)
         if command.startswith('npx cdk-assets'):
+            if self.raise_assets_error:
+                raise subprocess.CalledProcessError(1, 'bad command')
             self.subprocess_envs['assets'] = env
             parser.add_argument('--path')
             parsed, _ = parser.parse_known_args(command.split(' '))
             self.assertTrue(Path(parsed.path).exists())
             self.artifacts_published = True
         elif command.startswith('npx cdk synth'):
+            if self.raise_synth_error:
+                raise subprocess.CalledProcessError(1, 'bad command')
             self.assertEqual(str(self.cdk_json_path.parent.resolve()), cwd)
             self.subprocess_envs['synth'] = env
             parser.add_argument('npx')
@@ -314,3 +331,14 @@ class TestCdkJsonBuilder(PyFakeFsTestCase):
             self.expected_template,
             result
         )
+
+    def test_build_template__running_cdk_assets_command_raises_called_process_error__reraises_cdk_invocation_error(self):
+        self.raise_assets_error = True
+        self.manifest['files']['some_new_file.tar.gz'] = {'doesnt': 'matter'}
+        with self.assertRaises(CdkInvocationError):
+            self.builder.build_template(self.context, self.sceptre_user_data)
+
+    def test_build_template__running_cdk_synth_command_raises_called_process_error__reraises_cdk_invocation_error(self):
+        self.raise_synth_error = True
+        with self.assertRaises(CdkInvocationError):
+            self.builder.build_template(self.context, self.sceptre_user_data)
