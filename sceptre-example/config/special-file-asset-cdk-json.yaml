@@ -10,14 +10,6 @@ template:
   # rather than only Python.
   path: ../cdk-app/cdk.json
   deployment_type: bootstrapped
-  bootstrapless_config:
-    # You can use !stack_attr to reference other stack attributes that happen
-    # to be set with resolvers to chain the resolver value. It makes sense to use the
-    # same bucket as Sceptre uses for its template uploads for your file assets.
-    file_asset_bucket_name: !stack_attr template_bucket_name
-    # It can be useful to apply the same prefix as your template_key_prefix to ensure your
-    # assets are namespaced similarly to the rest of Sceptre's uploaded artifacts.
-    file_asset_prefix: "{{template_key_prefix}}/cdk-assets"
 
   bootstrap_qualifier: !stack_output cdk-bootstrap.yaml::Qualifier
   stack_logical_id: CdkAppStack
