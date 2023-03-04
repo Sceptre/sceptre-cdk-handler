@@ -167,6 +167,11 @@ class CDK(TemplateHandler):
 
     def validate(self):
         self._check_prerequisites()
+        if not self.cdk_template_path.exists():
+            raise TemplateHandlerArgumentsInvalidError(
+                f"Template path {self.cdk_template_path} does not exist."
+            )
+
         if self.path_is_to_cdk_json:
             self._check_cdk_json()
         elif not self.path_is_to_python_file:
