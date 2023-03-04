@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest import TestCase
+from pyfakefs.fake_filesystem_unittest import TestCase
 from unittest.mock import Mock, create_autospec
 
 import yaml
@@ -14,6 +14,7 @@ from sceptre_cdk_handler.command_checker import CommandChecker
 
 class TestCDK(TestCase):
     def setUp(self):
+        self.setUpPyfakefs()
         self.name = "CDK"
         self.connection_manager = Mock(ConnectionManager)
         self.arguments = {
@@ -65,6 +66,8 @@ class TestCDK(TestCase):
             cdk_json_builder_class=self.cdk_json_builder_class,
             command_checker_class=self.command_checker_class
         )
+        handler.cdk_template_path.parent.mkdir(parents=True, exist_ok=True)
+        handler.cdk_template_path.touch(exist_ok=True)
         return handler
 
     def validate_and_handle(self):
@@ -346,3 +349,15 @@ class TestCDK(TestCase):
 
         with self.assertRaises(TemplateHandlerArgumentsInvalidError):
             self.get_handler().validate()
+
+    def test_validate_deployment_type_is_not_specified__raises_argument_error(self):
+        del self.arguments['deployment_type']
+
+        with self.assertRaises(TemplateHandlerArgumentsInvalidError):
+            self.get_handler().validate()
+
+    def test_validate__template_file_does_not_exist__raises_argument_error(self):
+        handler = self.get_handler()
+        handler.cdk_template_path.unlink()
+        with self.assertRaises(TemplateHandlerArgumentsInvalidError):
+            handler.validate()
