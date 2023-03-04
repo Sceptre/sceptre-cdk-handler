@@ -166,6 +166,7 @@ class CDK(TemplateHandler):
         return self.arguments.get('stack_logical_id')
 
     def validate(self):
+        super().validate()
         self._check_prerequisites()
         if not self.cdk_template_path.exists():
             raise TemplateHandlerArgumentsInvalidError(
@@ -188,7 +189,6 @@ class CDK(TemplateHandler):
             raise TemplateHandlerArgumentsInvalidError(
                 "You cannot specify a bootstrap_qualifier with the bootstrapless deployment_type"
             )
-        super().validate()
 
     def _check_cdk_json(self):
         if self.cdk_context and any(isinstance(v, (list, dict)) for v in self.cdk_context.values()):
