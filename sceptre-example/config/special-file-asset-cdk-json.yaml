@@ -1,6 +1,11 @@
 # This template is an example of using the CDK template handler to deploy with a stack from a CDK
 # project that is not developed in Python. In this example, we're demonstrating how a TypeScript
 # stack Construct can be deployed via Sceptre using this handler.
+#
+# This StackConfig demonstrates one of the powers of Sceptre when combined with CDK. You can use
+# Sceptre to orchestrate deployments of many CDK apps as well as infrastructure defined in other
+# ways. Thus, you can have Python CDK stacks deployed alongside and connected via parameters and
+# outputs to TypeScript or Java Stacks.
 
 template:
   type: cdk
@@ -8,6 +13,12 @@ template:
   # project instead of a python file. The CDK Handler is smart enough to synthesize the template and
   # publish any assets using the CDK CLI. This lets the handler support all CDK-supported languages
   # rather than only Python.
+  #
+  # Also notice that this path is relative to the templates directory, but it isn't actually IN the
+  # templates directory. Since CDK projects require lots of files, you might not want to bury
+  # a whole directory like that in your "templates/" directory; You might find it's cleaner and
+  # easier to access when it's in your root directory. There's no problem putting your CDK projects
+  # in your root directory and referencing them with a relative path like this though.
   path: ../cdk-app/cdk.json
   deployment_type: bootstrapped
 
