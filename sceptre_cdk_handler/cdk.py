@@ -199,8 +199,8 @@ class CDK(TemplateHandler):
             )
         if self.stack_logical_id is None:
             raise TemplateHandlerArgumentsInvalidError(
-                "You must specify the stack_logical_id of the stack in your app in order to use the "
-                "use a cdk.json file with the CDK handler."
+                "No stack_logical_id has been specified. In order to use a cdk.json as you template, "
+                "you must indicate the logical id of the stack you want to deploy from your CDK app."
             )
 
     def handle(self) -> str:
