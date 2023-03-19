@@ -322,7 +322,7 @@ class CdkJsonBuilder(CdkBuilder):
     def _create_synth_command(self, output_dir: str, cdk_context: Dict[str, str]):
         command = f'npx cdk synth {self._stack_logical_id} -o {output_dir} -q '
         for key, value in cdk_context.items():
-            command += f'--context {key}={value} '
+            command += f'--context {key}="{value}" '
 
         return command
 
