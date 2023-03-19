@@ -35,8 +35,10 @@ class TestCommandChecker(TestCase):
     def which(self, cmd):
         return self.commands.get(cmd)
 
-    def subprocess_run(self, cmd, *, shell):
+    def subprocess_run(self, cmd, *, shell, stdout, stderr):
         self.assertTrue(shell)
+        self.assertIs(stdout, subprocess.DEVNULL)
+        self.assertIs(stderr, subprocess.DEVNULL)
         command_segments = cmd.split(' ')
         if command_segments[:2] == ['npm', 'list']:
             package_name = command_segments[2]
