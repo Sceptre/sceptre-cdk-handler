@@ -27,7 +27,8 @@ class SceptreCdkStack(aws_cdk.Stack):
 
 class CdkBuilder(ABC):
     """A base class for CDK builders to define the interface they all must meet."""
-    STACK_LOGICAL_ID = 'CDKStack'
+
+    STACK_LOGICAL_ID = "CDKStack"
 
     def __init__(
         self,
@@ -49,30 +50,21 @@ class CdkBuilder(ABC):
 
     @abstractmethod
     def build_template(
-        self,
-        cdk_context: Optional[dict],
-        sceptre_user_data: Any
-    ) -> dict: ...
+        self, cdk_context: Optional[dict], sceptre_user_data: Any
+    ) -> dict:
+        ...
 
     def _publish_artifacts(self, artifact_file: str, envs: Dict[str, str]):
-        self._logger.info('Publishing CDK assets')
-        self._logger.debug(f'Assets manifest file: {artifact_file}')
-        self._run_command(
-            f'npx cdk-assets -v publish --path {artifact_file}',
-            env=envs
-        )
+        self._logger.info("Publishing CDK assets")
+        self._logger.debug(f"Assets manifest file: {artifact_file}")
+        self._run_command(f"npx cdk-assets -v publish --path {artifact_file}", env=envs)
 
     def _run_command(self, command: str, env: Dict[str, str] = None, cwd: str = None):
         # We're assuming here that the cwd is the directory to run the command from. I'm not certain
         # that will always be correct...
         try:
             result = self._subprocess_run(
-                command,
-                env=env,
-                shell=True,
-                stdout=sys.stderr,
-                check=True,
-                cwd=cwd
+                command, env=env, shell=True, stdout=sys.stderr, check=True, cwd=cwd
             )
         except subprocess.CalledProcessError as ex:
             raise CdkInvocationError(
@@ -135,9 +127,7 @@ class PythonCdkBuilder(CdkBuilder):
         self._app_class = app_class
 
     def build_template(
-        self,
-        cdk_context: Optional[dict],
-        sceptre_user_data: Any
+        self, cdk_context: Optional[dict], sceptre_user_data: Any
     ) -> dict:
         assembly = self._synthesize(cdk_context, sceptre_user_data)
         manifest_artifact = self._get_assets_manifest(assembly)
@@ -159,34 +149,36 @@ class PythonCdkBuilder(CdkBuilder):
                 asset_artifacts = artifacts
                 break
         if asset_artifacts is None:
-            raise exceptions.SceptreException('CDK Asset manifest artifact not found')
+            raise exceptions.SceptreException("CDK Asset manifest artifact not found")
         return asset_artifacts
 
     @abstractmethod
-    def _synthesize(self, cdk_context: Optional[dict], sceptre_user_data: Any): ...
+    def _synthesize(self, cdk_context: Optional[dict], sceptre_user_data: Any):
+        ...
 
     def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
         return cloud_assembly.get_stack_by_name(self.STACK_LOGICAL_ID).template
 
-    def _only_asset_is_template(self, asset_artifacts: aws_cdk.cx_api.AssetManifestArtifact):
+    def _only_asset_is_template(
+        self, asset_artifacts: aws_cdk.cx_api.AssetManifestArtifact
+    ):
         manifest_contents = asset_artifacts.contents
         if manifest_contents.docker_images:
             return False
 
         keys = list(manifest_contents.files.keys())
-        expected_template = f'{self.STACK_LOGICAL_ID}.template.json'
+        expected_template = f"{self.STACK_LOGICAL_ID}.template.json"
         return keys == [expected_template]
 
 
 class BootstrappedCdkBuilder(PythonCdkBuilder):
     """A PythonCdkBuilder that leverages the CDK Bootstrap Stack to handle assets."""
+
     def _synthesize(
-        self,
-        cdk_context: Optional[dict],
-        sceptre_user_data: Any
+        self, cdk_context: Optional[dict], sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug('CDK synthesizing CdkStack Class')
-        self._logger.debug(f'CDK Context: {cdk_context}')
+        self._logger.debug("CDK synthesizing CdkStack Class")
+        self._logger.debug(f"CDK Context: {cdk_context}")
         app = self._app_class(context=cdk_context)
         self._stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data)
         return app.synth()
@@ -194,6 +186,7 @@ class BootstrappedCdkBuilder(PythonCdkBuilder):
 
 class BootstraplessCdkBuilder(PythonCdkBuilder):
     """A PythonCdkBuilder that uses the BootstraplessStackSynthesizer to handle assets."""
+
     def __init__(
         self,
         logger: logging.Logger,
@@ -203,7 +196,7 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         *,
         subprocess_run=subprocess.run,
         app_class=aws_cdk.App,
-        synthesizer_class=BootstraplessStackSynthesizer
+        synthesizer_class=BootstraplessStackSynthesizer,
     ):
         """A PythonCdkBuilder that uses the BootstraplessStackSynthesizer to handle assets.
 
@@ -230,12 +223,12 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
         self._synthesizer_class = synthesizer_class
 
     def _synthesize(
-        self,
-        cdk_context: Optional[dict],
-        sceptre_user_data: Any
+        self, cdk_context: Optional[dict], sceptre_user_data: Any
     ) -> CloudAssembly:
-        self._logger.debug(f'CDK synthesizing stack class: {self._stack_class.__name__}')
-        self._logger.debug(f'CDK Context: {cdk_context}')
+        self._logger.debug(
+            f"CDK synthesizing stack class: {self._stack_class.__name__}"
+        )
+        self._logger.debug(f"CDK Context: {cdk_context}")
         app = self._app_class(context=cdk_context)
         try:
             synthesizer = self._synthesizer_class(**self._bootstrapless_config)
@@ -245,7 +238,9 @@ class BootstraplessCdkBuilder(PythonCdkBuilder):
                 f"specified deployment config: {e}"
             ) from e
 
-        self._stack_class(app, self.STACK_LOGICAL_ID, sceptre_user_data, synthesizer=synthesizer)
+        self._stack_class(
+            app, self.STACK_LOGICAL_ID, sceptre_user_data, synthesizer=synthesizer
+        )
         return app.synth()
 
 
@@ -254,6 +249,7 @@ class CdkJsonBuilder(CdkBuilder):
 
     This class is useful for deploying non-Python CDK projects with Sceptre.
     """
+
     def __init__(
         self,
         logger: logging.Logger,
@@ -307,46 +303,48 @@ class CdkJsonBuilder(CdkBuilder):
                 # need to deploy assets if the only asset is the template
                 self._logger.debug("Only asset is template; Skipping asset upload.")
             else:
-                assets_file = Path(output_dir, f'{self._stack_logical_id}.assets.json')
+                assets_file = Path(output_dir, f"{self._stack_logical_id}.assets.json")
                 self._publish_artifacts(str(assets_file), environment_variables)
 
-            template_file = Path(output_dir, f'{self._stack_logical_id}.template.json')
+            template_file = Path(output_dir, f"{self._stack_logical_id}.template.json")
             template = self._get_template(template_file)
             return template
 
-    def _synthesize(self, output_dir: str, cdk_context: Optional[dict], envs: Dict[str, str]):
+    def _synthesize(
+        self, output_dir: str, cdk_context: Optional[dict], envs: Dict[str, str]
+    ):
         command = self._create_synth_command(output_dir, cdk_context)
         # Run the synth with the cwd of the cdk.json's directory
         self._run_command(command, envs, str(self._cdk_json_path.parent.resolve()))
 
     def _create_synth_command(self, output_dir: str, cdk_context: Dict[str, str]):
-        command = f'npx cdk synth {self._stack_logical_id} -o {output_dir} -q '
+        command = f"npx cdk synth {self._stack_logical_id} -o {output_dir} -q "
         for key, value in cdk_context.items():
             command += f'--context {key}="{value}" '
 
         return command
 
     def _get_assets_manifest(self, output_dir: str):
-        assets_file = Path(output_dir, f'{self._stack_logical_id}.assets.json')
+        assets_file = Path(output_dir, f"{self._stack_logical_id}.assets.json")
         if not assets_file.exists():
-            raise exceptions.SceptreException('CDK Asset manifest artifact not found')
+            raise exceptions.SceptreException("CDK Asset manifest artifact not found")
 
-        with assets_file.open(mode='r') as f:
+        with assets_file.open(mode="r") as f:
             assets_dict = json.load(f)
         return assets_dict
 
     def _only_asset_is_template(self, assets_dict: dict) -> bool:
-        if assets_dict.get('dockerImages', {}):
+        if assets_dict.get("dockerImages", {}):
             return False
 
-        keys = list(assets_dict.get('files', {}).keys())
-        expected_template = f'{self._stack_logical_id}.template.json'
+        keys = list(assets_dict.get("files", {}).keys())
+        expected_template = f"{self._stack_logical_id}.template.json"
         return keys == [expected_template]
 
     def _get_template(self, template_path: Path):
-        with template_path.open(mode='r') as f:
+        with template_path.open(mode="r") as f:
             return json.load(f)
 
     def _add_bootstrapless_envs(self, environment_variables: Dict[str, str]):
         for key, value in self._bootstrapless_config.items():
-            environment_variables[f'BSS_{key.upper()}'] = value
+            environment_variables[f"BSS_{key.upper()}"] = value

@@ -6,6 +6,6 @@ import os
 
 def lambda_handler(event, context):
     print(f'My special env: {os.getenv("SPECIAL_ENV")}')
-    response = requests.get('https://api.ipify.org?format=json')
+    response = requests.get("https://api.ipify.org?format=json")
     if response.ok:
         print(f'My ip: {response.json()["ip"]}')

@@ -20,33 +20,39 @@ class CdkStack(aws_cdk.Stack):
         - 'BucketDomainName' - The domain name of the S3 Bucket
     """
 
-    def __init__(self, scope: constructs.Construct, construct_id: str, sceptre_user_data, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: constructs.Construct,
+        construct_id: str,
+        sceptre_user_data,
+        **kwargs
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         bucket_name = aws_cdk.CfnParameter(
             self,
-            id='BucketName',
-            description='The name for the S3 Bucket',
+            id="BucketName",
+            description="The name for the S3 Bucket",
         )
 
         s3_bucket = aws_cdk.aws_s3.Bucket(
-            self,
-            'S3Bucket',
-            bucket_name=bucket_name.value_as_string
+            self, "S3Bucket", bucket_name=bucket_name.value_as_string
         )
 
         aws_cdk.aws_s3_deployment.BucketDeployment(
             self,
-            'S3Deployment',
-            sources=[aws_cdk.aws_s3_deployment.Source.data(
-                sceptre_user_data['object_name'], 'hello, world!'
-            )],
-            destination_bucket=s3_bucket
+            "S3Deployment",
+            sources=[
+                aws_cdk.aws_s3_deployment.Source.data(
+                    sceptre_user_data["object_name"], "hello, world!"
+                )
+            ],
+            destination_bucket=s3_bucket,
         )
 
         aws_cdk.CfnOutput(
             self,
-            id='BucketDomainName',
-            description='The domain name of the S3 Bucket',
-            value=s3_bucket.bucket_domain_name
+            id="BucketDomainName",
+            description="The domain name of the S3 Bucket",
+            value=s3_bucket.bucket_domain_name,
         )

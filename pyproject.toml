@@ -1,10 +1,38 @@
-[tool.coverage.run]
-branch = true
-source = [ "sceptre_cdk_handler" ]
+[tool.poetry]
+name = "sceptre-cdk-handler"
+version = "2.1.0"
+packages = [{ include = "sceptre_cdk_handler" }]
+readme = "README.md"
+homepage = "https://github.com/Sceptre/sceptre-cdk-handler"
+repository = "https://github.com/Sceptre/sceptre-cdk-handler"
+authors = ["Sceptre <sceptreorg@gmail.com>"]
+description = "AWS CDK Template Handler"
+keywords = ["sceptre", "sceptre-handler", "AWS", "CDK"]
+license = "Apache-2.0"
+classifiers = [
+  "Intended Audience :: Developers",
+  "Natural Language :: English",
+  "Environment :: Console",
+]
 
-[tool.coverage.report]
-exclude_lines = [ ]
-show_missing = true
+[tool.poetry.plugins."sceptre.template_handlers"]
+"cdk" = "sceptre_cdk_handler.cdk:CDK"
 
-[tool.pytest.ini_options]
-addopts = "--cov --cov-report term-missing"
+[tool.poetry.dependencies]
+python = "^3.8"
+aws_cdk-lib = "^2.0"
+cdk-bootstrapless-synthesizer = "^2.0"
+typing-extensions = "^4.0"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.2.1"
+tox = "^3.23.0"
+pytest = "^7.4.3"
+pytest-cov = "^4.0.0"
+pyfakefs = "^5.1"
+sceptre = "^4.0"
+tox-gh-matrix = "^0.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
