@@ -51,8 +51,7 @@ class CdkBuilder(ABC):
     @abstractmethod
     def build_template(
         self, cdk_context: Optional[dict], sceptre_user_data: Any
-    ) -> dict:
-        ...
+    ) -> dict: ...
 
     def _publish_artifacts(self, artifact_file: str, envs: Dict[str, str]):
         self._logger.info("Publishing CDK assets")
@@ -153,8 +152,7 @@ class PythonCdkBuilder(CdkBuilder):
         return asset_artifacts
 
     @abstractmethod
-    def _synthesize(self, cdk_context: Optional[dict], sceptre_user_data: Any):
-        ...
+    def _synthesize(self, cdk_context: Optional[dict], sceptre_user_data: Any): ...
 
     def _get_template(self, cloud_assembly: CloudAssembly) -> dict:
         return cloud_assembly.get_stack_by_name(self.STACK_LOGICAL_ID).template
