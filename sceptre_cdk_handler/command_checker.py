@@ -5,12 +5,9 @@ from logging import Logger
 
 class CommandChecker:
     """A utility for checking if specific commands and node packages exist in the environment."""
+
     def __init__(
-        self,
-        logger: Logger,
-        *,
-        subprocess_run=subprocess.run,
-        which_func=shutil.which
+        self, logger: Logger, *, subprocess_run=subprocess.run, which_func=shutil.which
     ):
         self._logger = logger
         self._subprocess_run = subprocess_run
@@ -39,19 +36,26 @@ class CommandChecker:
             package: str - The name of the node package to check
         """
         workspace_result = self._subprocess_run(
-            f'npm list {package}', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            f"npm list {package}",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        self._logger.debug(f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}")
+        self._logger.debug(
+            f"Workspace NPM package '{package}' exists: {not bool(workspace_result.returncode)}"
+        )
 
         if workspace_result.returncode == 0:
             return True
 
         global_result = self._subprocess_run(
-            f'npm --global list {package}',
+            f"npm --global list {package}",
             shell=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
-        self._logger.debug(f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}")
+        self._logger.debug(
+            f"f'Global NPM package '{package}' exists: {not bool(global_result.returncode)}"
+        )
 
         return global_result.returncode == 0

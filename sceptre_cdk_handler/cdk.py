@@ -12,7 +12,7 @@ from sceptre_cdk_handler.cdk_builder import (
     BootstrappedCdkBuilder,
     BootstraplessCdkBuilder,
     SceptreCdkStack,
-    CdkJsonBuilder
+    CdkJsonBuilder,
 )
 from sceptre_cdk_handler.class_importer import ClassImporter
 from sceptre_cdk_handler.command_checker import CommandChecker
@@ -25,8 +25,8 @@ except ImportError:
     # back-ports a lot of the typing constructs of later versions of Python.
     from typing_extensions import Literal
 
-DEFAULT_CLASS_NAME = 'CdkStack'
-QUALIFIER_CONTEXT_KEY = '@aws-cdk/core:bootstrapQualifier'
+DEFAULT_CLASS_NAME = "CdkStack"
+QUALIFIER_CONTEXT_KEY = "@aws-cdk/core:bootstrapQualifier"
 
 
 class CDK(TemplateHandler):
@@ -47,14 +47,14 @@ class CDK(TemplateHandler):
         bootstrapped_cdk_builder_class=BootstrappedCdkBuilder,
         bootstrapless_cdk_builder_class=BootstraplessCdkBuilder,
         cdk_json_builder_class=CdkJsonBuilder,
-        command_checker_class=CommandChecker
+        command_checker_class=CommandChecker,
     ):
         super().__init__(
             name=name,
             arguments=arguments,
             sceptre_user_data=sceptre_user_data,
             connection_manager=connection_manager,
-            stack_group_config=stack_group_config
+            stack_group_config=stack_group_config,
         )
         self._importer = importer_class()
         self._bootstrapped_cdk_builder_class = bootstrapped_cdk_builder_class
@@ -75,7 +75,7 @@ class CDK(TemplateHandler):
                 "path": {"type": "string"},
                 "deployment_type": {
                     "type": "string",
-                    "enum": ["bootstrapped", "bootstrapless"]
+                    "enum": ["bootstrapped", "bootstrapless"],
                 },
                 "bootstrap_qualifier": {"type": "string"},
                 "context": {"type": "object"},
@@ -98,17 +98,14 @@ class CDK(TemplateHandler):
                     },
                 },
             },
-            "required": [
-                "path",
-                'deployment_type'
-            ]
+            "required": ["path", "deployment_type"],
         }
 
     @property
     def cdk_template_path(self) -> Path:
         """CDK Template file path, relative to the the project's templates directory"""
 
-        return self._resolve_template_path(self.arguments['path'])
+        return self._resolve_template_path(self.arguments["path"])
 
     def _resolve_template_path(self, template_path: str) -> Path:
         """
@@ -119,51 +116,51 @@ class CDK(TemplateHandler):
         return pathlib.Path(
             self.stack_group_config["project_path"],
             "templates",
-            normalise_path(template_path)
+            normalise_path(template_path),
         )
 
     @property
     def cdk_context(self) -> dict:
         """The CDK context dict to pass to the app. Used to pass feature flags, etc..."""
 
-        return self.arguments.get('context', {})
+        return self.arguments.get("context", {})
 
     @property
     def cdk_class_name(self) -> str:
         """The name of the CDK Stack class on the template file to import."""
 
-        return self.arguments.get('class_name', DEFAULT_CLASS_NAME)
+        return self.arguments.get("class_name", DEFAULT_CLASS_NAME)
 
     @property
     def bootstrap_qualifier(self) -> Optional[str]:
         """The bootstrap stack qualifier to use for the "bootstrapped" deployment_type."""
-        return self.arguments.get('bootstrap_qualifier')
+        return self.arguments.get("bootstrap_qualifier")
 
     @property
-    def deployment_type(self) -> Literal['bootstrapped', 'bootstrapless']:
+    def deployment_type(self) -> Literal["bootstrapped", "bootstrapless"]:
         """The way Sceptre should handle the deployment of file and image assets. Can be one of
         "bootstrapped" or "bootstrapless".
         """
-        return self.arguments['deployment_type']
+        return self.arguments["deployment_type"]
 
     @property
     def bootstrapless_config(self) -> dict:
         """The synthesizer args for CDK Bootstrapless Synthesizer. Used only with the "bootstrapless"
         deployment_type.
         """
-        return self.arguments.get('bootstrapless_config', {})
+        return self.arguments.get("bootstrapless_config", {})
 
     @property
     def path_is_to_cdk_json(self) -> bool:
-        return self.cdk_template_path.name.lower() == 'cdk.json'
+        return self.cdk_template_path.name.lower() == "cdk.json"
 
     @property
     def path_is_to_python_file(self) -> bool:
-        return self.cdk_template_path.suffix == '.py'
+        return self.cdk_template_path.suffix == ".py"
 
     @property
     def stack_logical_id(self) -> Optional[str]:
-        return self.arguments.get('stack_logical_id')
+        return self.arguments.get("stack_logical_id")
 
     def validate(self):
         super().validate()
@@ -181,7 +178,7 @@ class CDK(TemplateHandler):
                 "cdk.json file at the root of a CDK project."
             )
 
-        if self.deployment_type == 'bootstrapped' and self.bootstrapless_config:
+        if self.deployment_type == "bootstrapped" and self.bootstrapless_config:
             raise TemplateHandlerArgumentsInvalidError(
                 "You cannot specify a bootstrapless_config with the bootstrapped deployment_type"
             )
@@ -191,7 +188,9 @@ class CDK(TemplateHandler):
             )
 
     def _check_cdk_json(self):
-        if self.cdk_context and any(isinstance(v, (list, dict)) for v in self.cdk_context.values()):
+        if self.cdk_context and any(
+            isinstance(v, (list, dict)) for v in self.cdk_context.values()
+        ):
             raise TemplateHandlerArgumentsInvalidError(
                 "You cannot use nested values within your CDK context when your path points to a cdk.json "
                 "file. If you need to specify such values, put them in the context of your cdk.json "
@@ -214,22 +213,22 @@ class CDK(TemplateHandler):
         # or may not be in Python.
         if self.path_is_to_cdk_json:
             builder = self._create_cdk_json_builder()
-        elif self.deployment_type == 'bootstrapped':
+        elif self.deployment_type == "bootstrapped":
             stack_class: Type[SceptreCdkStack] = self._importer.import_class(
-                self.cdk_template_path,
-                self.cdk_class_name
+                self.cdk_template_path, self.cdk_class_name
             )
             builder = self._create_bootstrapped_builder(stack_class)
 
         elif self.deployment_type == "bootstrapless":
             stack_class: Type[SceptreCdkStack] = self._importer.import_class(
-                self.cdk_template_path,
-                self.cdk_class_name
+                self.cdk_template_path, self.cdk_class_name
             )
             builder = self._create_bootstrapless_builder(stack_class)
         else:
             # It shouldn't be possible to get here due to the json schema validation
-            raise ValueError("deployment_type must be 'bootstrapped' or 'bootstrapless'")
+            raise ValueError(
+                "deployment_type must be 'bootstrapped' or 'bootstrapless'"
+            )
 
         context = self._make_context_to_use()
         template_dict = builder.build_template(context, self.sceptre_user_data)
@@ -241,14 +240,14 @@ class CDK(TemplateHandler):
             self.connection_manager,
             self.cdk_template_path.resolve(),
             self.stack_logical_id,
-            self.bootstrapless_config
+            self.bootstrapless_config,
         )
 
-    def _create_bootstrapped_builder(self, stack_class: Type[SceptreCdkStack]) -> BootstrappedCdkBuilder:
+    def _create_bootstrapped_builder(
+        self, stack_class: Type[SceptreCdkStack]
+    ) -> BootstrappedCdkBuilder:
         builder = self._bootstrapped_cdk_builder_class(
-            self.logger,
-            self.connection_manager,
-            stack_class
+            self.logger, self.connection_manager, stack_class
         )
         return builder
 
@@ -272,10 +271,7 @@ class CDK(TemplateHandler):
 
     def _create_bootstrapless_builder(self, stack_class) -> BootstraplessCdkBuilder:
         return self._bootstrapless_cdk_builder_class(
-            self.logger,
-            self.connection_manager,
-            self.bootstrapless_config,
-            stack_class
+            self.logger, self.connection_manager, self.bootstrapless_config, stack_class
         )
 
     def _check_prerequisites(self) -> None:
@@ -287,18 +283,17 @@ class CDK(TemplateHandler):
             SceptreException: Node Package prerequisite not found
         """
         # Check Command Prerequisites
-        cmd_prerequisites = [
-            'node',
-            'npx'
-        ]
+        cmd_prerequisites = ["node", "npx"]
         for cmd_prerequisite in cmd_prerequisites:
             if not self._command_checker.cmd_exists(cmd_prerequisite):
-                raise SceptreException(f"Command prerequisite '{cmd_prerequisite}' not found")
+                raise SceptreException(
+                    f"Command prerequisite '{cmd_prerequisite}' not found"
+                )
 
         # Check Node Package Prerequisites
-        node_prerequisites = [
-            'cdk-assets'
-        ]
+        node_prerequisites = ["cdk-assets"]
         for node_prerequisite in node_prerequisites:
             if not self._command_checker.node_package_exists(node_prerequisite):
-                raise SceptreException(f"Node Package prerequisite '{node_prerequisite}' not found")
+                raise SceptreException(
+                    f"Node Package prerequisite '{node_prerequisite}' not found"
+                )

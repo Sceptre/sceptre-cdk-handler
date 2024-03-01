@@ -10,7 +10,9 @@ from sceptre_cdk_handler.cdk_builder import SceptreCdkStack
 
 
 class ClassImporter:
-    def import_class(self, template_path: Path, class_name: str) -> Type[SceptreCdkStack]:
+    def import_class(
+        self, template_path: Path, class_name: str
+    ) -> Type[SceptreCdkStack]:
         """
         Import the CDK Python template module.
 
@@ -27,7 +29,9 @@ class ClassImporter:
         """
         template_module_name = self._enable_import_hierarchy(template_path)
 
-        loader = importlib.machinery.SourceFileLoader(template_module_name, str(template_path))
+        loader = importlib.machinery.SourceFileLoader(
+            template_module_name, str(template_path)
+        )
         spec = importlib.util.spec_from_loader(template_module_name, loader)
         template_module = importlib.util.module_from_spec(spec)
         loader.exec_module(template_module)
@@ -60,7 +64,11 @@ class ClassImporter:
             sys.path.append(str(parent))
             # If the parent directory is a valid python package in name and structure, we'll add it
             # to the module name segments and keep climbing
-            if in_package_structure and (parent / '__init__.py').exists() and parent.name.isidentifier():
+            if (
+                in_package_structure
+                and (parent / "__init__.py").exists()
+                and parent.name.isidentifier()
+            ):
                 module_path_segments.insert(0, parent.name)
             # But if the parent directory isn't a valid python package in name and structure, we'll
             # stop building out the module path.
@@ -72,4 +80,4 @@ class ClassImporter:
                 break
 
         # We'll make the full module path by joining all the segments together.
-        return '.'.join(module_path_segments)
+        return ".".join(module_path_segments)
