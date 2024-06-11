@@ -278,15 +278,20 @@ class TestCdkJsonBuilder(PyFakeFsTestCase):
         self.assertTrue(shell)
         self.assertTrue(check)
         self.assertIs(sys.stderr, stdout)
-        parser = argparse.ArgumentParser(prog="npx", exit_on_error=False)
+        parser = argparse.ArgumentParser(prog="npx")
+
         if command.startswith("npx cdk-assets"):
             if self.raise_assets_error:
                 raise subprocess.CalledProcessError(1, "bad command")
             self.subprocess_envs["assets"] = env
             parser.add_argument("--path")
-            parsed, _ = parser.parse_known_args(command.split(" "))
-            self.assertTrue(Path(parsed.path).exists())
+            try:
+                parsed, _ = parser.parse_known_args(command.split(" "))
+                self.assertTrue(Path(parsed.path).exists())
+            except SystemExit:
+                raise subprocess.CalledProcessError(1, "bad command")
             self.artifacts_published = True
+
         elif command.startswith("npx cdk synth"):
             if self.raise_synth_error:
                 raise subprocess.CalledProcessError(1, "bad command")
@@ -298,19 +303,26 @@ class TestCdkJsonBuilder(PyFakeFsTestCase):
             parser.add_argument("stack_logical_id")
             parser.add_argument("-o", "--output")
             parser.add_argument("--context", action="append")
-            parsed, _ = parser.parse_known_args(command.split(" "))
-            self.synth_context = {
-                key: value
-                for key, value in [context.split("=") for context in parsed.context]
-            }
-            assets_file = Path(parsed.output, f"{parsed.stack_logical_id}.assets.json")
-            template_file = Path(
-                parsed.output, f"{parsed.stack_logical_id}.template.json"
-            )
-            self.fs.create_file(str(assets_file), contents=json.dumps(self.manifest))
-            self.fs.create_file(
-                str(template_file), contents=json.dumps(self.expected_template)
-            )
+            try:
+                parsed, _ = parser.parse_known_args(command.split(" "))
+                self.synth_context = {
+                    key: value
+                    for key, value in [context.split("=") for context in parsed.context]
+                }
+                assets_file = Path(
+                    parsed.output, f"{parsed.stack_logical_id}.assets.json"
+                )
+                template_file = Path(
+                    parsed.output, f"{parsed.stack_logical_id}.template.json"
+                )
+                self.fs.create_file(
+                    str(assets_file), contents=json.dumps(self.manifest)
+                )
+                self.fs.create_file(
+                    str(template_file), contents=json.dumps(self.expected_template)
+                )
+            except SystemExit:
+                raise subprocess.CalledProcessError(1, "bad command")
 
     def test_build_template__sceptre_user_data_specified__logs_warning(self):
         self.builder.build_template(self.context, self.sceptre_user_data)

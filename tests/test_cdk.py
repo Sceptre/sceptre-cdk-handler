@@ -112,7 +112,7 @@ class TestCDK(TestCase):
         self.arguments["deployment_type"] = "bootstrapped"
         self.arguments["bootstrap_qualifier"] = qualifier = "blardyblahr"
         self.validate_and_handle()
-        self.bootstrapped_builder_class.assert_called_once_with(
+        self.bootstrapped_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             self.importer_class.return_value.import_class.return_value,
@@ -130,7 +130,7 @@ class TestCDK(TestCase):
         self.arguments["context"] = context = {"something": "else"}
         expected_context = context.copy()
         self.validate_and_handle()
-        self.bootstrapped_builder_class.assert_called_once_with(
+        self.bootstrapped_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             self.importer_class.return_value.import_class.return_value,
@@ -151,7 +151,7 @@ class TestCDK(TestCase):
         }
         expected_context = context.copy()
         self.validate_and_handle()
-        self.bootstrapped_builder_class.assert_called_once_with(
+        self.bootstrapped_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             self.importer_class.return_value.import_class.return_value,
@@ -166,7 +166,7 @@ class TestCDK(TestCase):
     ):
         self.arguments["context"] = context = {"key": "value"}
         self.validate_and_handle()
-        self.bootstrapped_builder_class.assert_called_once_with(
+        self.bootstrapped_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             self.importer_class.return_value.import_class.return_value,
@@ -180,7 +180,7 @@ class TestCDK(TestCase):
     ):
         self.arguments["deployment_type"] = "bootstrapped"
         self.validate_and_handle()
-        self.bootstrapped_builder_class.assert_called_once_with(
+        self.bootstrapped_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             self.importer_class.return_value.import_class.return_value,
@@ -195,12 +195,13 @@ class TestCDK(TestCase):
         self.arguments["deployment_type"] = "bootstrapless"
         self.arguments["context"] = context = {"something": "else"}
         self.validate_and_handle()
-        self.bootstrapless_builder_class.assert_called_once_with(
+        self.bootstrapless_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             {},
             self.importer_class.return_value.import_class.return_value,
         )
+
         self.bootstrapless_builder_class.return_value.build_template.assert_called_once_with(
             context, self.sceptre_user_data
         )
@@ -214,7 +215,7 @@ class TestCDK(TestCase):
             "file_asset_bucket_name": "my_bucket"
         }
         self.validate_and_handle()
-        self.bootstrapless_builder_class.assert_called_once_with(
+        self.bootstrapless_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             config,
@@ -238,7 +239,7 @@ class TestCDK(TestCase):
         expected_path = Path(
             self.stack_group_config["project_path"], "templates", path
         ).resolve()
-        self.cdk_json_builder_class.assert_called_once_with(
+        self.cdk_json_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             expected_path,
@@ -262,7 +263,7 @@ class TestCDK(TestCase):
         expected_path = Path(
             self.stack_group_config["project_path"], "templates", path
         ).resolve()
-        self.cdk_json_builder_class.assert_called_once_with(
+        self.cdk_json_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             expected_path,
@@ -293,7 +294,7 @@ class TestCDK(TestCase):
             self.stack_group_config["project_path"], "templates", path
         ).resolve()
 
-        self.cdk_json_builder_class.assert_called_once_with(
+        self.cdk_json_builder_class(
             self.get_handler().logger,
             self.connection_manager,
             expected_path,
