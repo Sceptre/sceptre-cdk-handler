@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: end-of-file-fixer
       - id: mixed-line-ending
@@ -17,14 +17,16 @@ repos:
     hooks:
       - id: yamllint
   - repo: https://github.com/awslabs/cfn-python-lint
-    rev: v0.86.0
+    rev: v1.2.5.a10
     hooks:
       - id: cfn-python-lint
         args:
           - "-i=E0000"
           - "-i=E1001"
           - "-i=E3012"
+          - "-i=E1019"
           - "-i=W6001"
+          - "-i=W2031"
         exclude: |
           (?x)(
             ^integration-tests/sceptre-project/config/|
@@ -36,7 +38,7 @@ repos:
             ^.pre-commit-config.yaml
           )
   - repo: https://github.com/psf/black
-    rev: 24.2.0
+    rev: 24.4.2
     hooks:
       - id: black
   - repo: https://github.com/python-poetry/poetry
@@ -47,7 +49,7 @@ repos:
         language_version: python3.10
         args: ['--check']
   - repo: https://github.com/sirosen/check-jsonschema
-    rev: 0.28.0
+    rev: 0.28.5
     hooks:
       - id: check-github-workflows
       - id: check-github-actions
